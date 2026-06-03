@@ -41,9 +41,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md px-6">
         {/* Logo / Brand */}
         <div className="text-center mb-10">
-          <div className="flex justify-center mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/citymall-logo.svg" alt="CityMall" width={90} height={108} />
+          <div className="flex justify-center mb-4">
+            <div className="bg-white rounded-2xl p-4 shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/citymall-logo.png" alt="CityMall" className="h-20 w-auto" />
+            </div>
           </div>
           <p className="text-blue-200 mt-2 text-xs font-semibold uppercase tracking-widest">Sistema de Reportes</p>
         </div>

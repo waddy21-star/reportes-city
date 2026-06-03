@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -54,7 +53,10 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
       {/* Logo area */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <Image src="/citymall-logo.svg" alt="CityMall" width={40} height={48} className="flex-shrink-0" />
+          <div className="bg-white rounded-lg p-1.5 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/citymall-logo.png" alt="CityMall" className="h-9 w-auto" />
+          </div>
           <div className="text-blue-200 text-xs font-semibold uppercase tracking-widest">Reportes</div>
         </div>
         {onClose && (
