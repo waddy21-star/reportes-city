@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       String   @default("USER") // "ADMIN" or "USER"
+  department String?  // "SEGURIDAD", "ELECTRICO", "CIVIL", "REFRIGERACION"
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  reports    Report[]
+}
+
+model Task {
+  id          String          @id @default(cuid())
+  name        String
+  department  String          // "SEGURIDAD", "ELECTRICO", "CIVIL", "REFRIGERACION"
+  timeSlot    String?         // e.g. "04:30" for security tasks
+  isCustom    Boolean         @default(false) // user-created tasks
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  checkItems  ChecklistItem[]
+  reportTasks ReportTask[]
+}
+
+model ChecklistItem {
+  id                   String               @id @default(cuid())
+  label                String
+  taskId               String
+  order                Int                  @default(0)
+  task                 Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reportChecklistItems ReportChecklistItem[]
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  userId      String
+  department  String
+  level       String       @default("NORMAL") // "NORMAL" or "URGENTE"
+  status      String       @default("COMPLETADO") // "COMPLETADO", "PENDIENTE"
+  notes       String?
+  signature   String?      // base64 string
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id])
+  photos      Photo[]
+  reportTasks ReportTask[]
+}
+
+model ReportTask {
+  id           String               @id @default(cuid())
+  reportId     String
+  taskId       String
+  hasIncident  Boolean              @default(false)
+  incidentNote String?
+  report       Report               @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  task         Task                 @relation(fields: [taskId], references: [id])
+  checkItems   ReportChecklistItem[]
+}
+
+model ReportChecklistItem {
+  id              String     @id @default(cuid())
+  reportTaskId    String
+  checklistItemId String
+  checked         Boolean    @default(false)
+  reportTask      ReportTask @relation(fields: [reportTaskId], references: [id], onDelete: Cascade)
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  reportId  String
+  filename  String
+  path      String
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
