@@ -40,17 +40,31 @@ model ChecklistItem {
 }
 
 model Report {
-  id          String       @id @default(cuid())
-  userId      String
-  department  String
-  level       String       @default("NORMAL") // "NORMAL" or "URGENTE"
-  status      String       @default("COMPLETADO") // "COMPLETADO", "PENDIENTE"
-  notes       String?
-  signature   String?      // base64 string
-  createdAt   DateTime     @default(now())
-  user        User         @relation(fields: [userId], references: [id])
-  photos      Photo[]
-  reportTasks ReportTask[]
+  id           String                   @id @default(cuid())
+  userId       String
+  department   String
+  level        String                   @default("NORMAL") // "NORMAL" or "URGENTE"
+  status       String                   @default("COMPLETADO") // "COMPLETADO", "PENDIENTE"
+  notes        String?
+  signature    String?                  // base64 string
+  createdAt    DateTime                 @default(now())
+  user         User                     @relation(fields: [userId], references: [id])
+  photos       Photo[]
+  reportTasks  ReportTask[]
+  localRecords LocalMaintenanceRecord[]
+}
+
+model LocalMaintenanceRecord {
+  id        String   @id @default(cuid())
+  reportId  String
+  localName String
+  acType    String   // "MINI_SPLIT", "PISO_CIELO", "CASSETTE", "CENTRAL_DUCTOS", "CHILLER"
+  location  String   // "NIVEL_1", "NIVEL_2", "NIVEL_3", "SOTANO_1", "SOTANO_2", "SOTANO_3"
+  items     String   // JSON string: [{id: number, label: string, checked: boolean}]
+  hasIssue  Boolean  @default(false)
+  issueNote String?
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }
 
 model ReportTask {

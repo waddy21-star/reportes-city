@@ -195,6 +195,63 @@ async function main() {
     }
   }
 
+  // Civil tasks
+  const civilTaskNames = [
+    'Azoteas Limpieza e Impermeabilización',
+    'Remplazo de Porcelanato',
+    'Pintura General Cielos y Paredes',
+    'Revisión de Varandales y Vidrios Comercial',
+    'Revisión Juntas Sísmicas',
+    'Revisión de Loza Sanitarias y Grifos Lavamanos',
+    'Revisión Jardinería',
+    'Revisión de Cubos',
+    'Revisión Puertas de Emergencias',
+    'Parqueo Pintura Topes',
+    'Mallas Colindantes',
+    'Revisión Parrillas Entradas',
+    'Puertas Lobbys',
+  ]
+
+  const civilCount = await prisma.task.count({ where: { department: 'CIVIL' } })
+  if (civilCount === 0) {
+    for (let i = 0; i < civilTaskNames.length; i++) {
+      await prisma.task.create({
+        data: {
+          name: civilTaskNames[i],
+          department: 'CIVIL',
+          order: i + 1,
+          isCustom: false,
+        },
+      })
+    }
+  }
+
+  // Refrigeration Mall tasks
+  const refrigMallTaskNames = [
+    'Mantenimiento UMAs',
+    'Mantenimiento Chillers',
+    'Mantenimiento Torres de Enfriamiento',
+    'Mantenimiento Bombas de Agua',
+    'Mantenimiento Inyectores y Extractores',
+    'Revisión de Rejillas (Baños y Centro Comercial)',
+    'Revisión de Temperatura',
+  ]
+
+  const refrigCount = await prisma.task.count({ where: { department: 'REFRIGERACION' } })
+  if (refrigCount === 0) {
+    for (let i = 0; i < refrigMallTaskNames.length; i++) {
+      await prisma.task.create({
+        data: {
+          name: refrigMallTaskNames[i],
+          department: 'REFRIGERACION',
+          timeSlot: 'MALL',
+          order: i + 1,
+          isCustom: false,
+        },
+      })
+    }
+  }
+
   console.log('Seeding complete!')
 }
 

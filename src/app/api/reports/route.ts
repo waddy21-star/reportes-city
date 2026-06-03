@@ -51,12 +51,22 @@ export async function GET(req: NextRequest) {
         },
       },
       photos: true,
+      localRecords: true,
     },
     orderBy: { createdAt: 'desc' },
     take: 100,
   })
 
   return NextResponse.json(reports)
+}
+
+type LocalRecordInput = {
+  localName: string
+  acType: string
+  location: string
+  items: { id: number; label: string; checked: boolean }[]
+  hasIssue: boolean
+  issueNote?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -66,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { department, level, notes, signature, tasks } = body
+  const { department, level, notes, signature, tasks, localRecords } = body
 
   const report = await prisma.report.create({
     data: {
@@ -89,6 +99,18 @@ export async function POST(req: NextRequest) {
           },
         })) || [],
       },
+      localRecords: localRecords && localRecords.length > 0
+        ? {
+            create: localRecords.map((rec: LocalRecordInput) => ({
+              localName: rec.localName,
+              acType: rec.acType,
+              location: rec.location,
+              items: JSON.stringify(rec.items),
+              hasIssue: rec.hasIssue || false,
+              issueNote: rec.issueNote || null,
+            })),
+          }
+        : undefined,
     },
     include: {
       user: { select: { id: true, name: true, department: true } },
@@ -99,6 +121,7 @@ export async function POST(req: NextRequest) {
         },
       },
       photos: true,
+      localRecords: true,
     },
   })
 

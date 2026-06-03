@@ -24,6 +24,7 @@ export async function GET(
         },
       },
       photos: true,
+      localRecords: true,
     },
   })
 
