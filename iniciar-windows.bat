@@ -115,5 +115,18 @@ echo.
 start "" timeout /t 3 >nul
 start "" "http://localhost:3001"
 
-:: Iniciar el servidor
-npm run start
+:: Iniciar el servidor (la ventana queda abierta mientras corre)
+call npm run start
+
+:: Si llegamos aquí, el servidor se detuvo o falló al arrancar.
+echo.
+echo  ══════════════════════════════════════════════
+echo   El servidor se detuvo.
+echo.
+echo   Si ves un error arriba, toma una foto de la pantalla.
+echo   Posibles causas:
+echo     - El puerto 3001 ya está en uso por otro programa.
+echo     - Falta compilar: borra la carpeta .next y vuelve a ejecutar.
+echo  ══════════════════════════════════════════════
+echo.
+pause
