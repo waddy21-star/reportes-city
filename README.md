@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema de Reportes — CityMall
 
-## Getting Started
+Herramienta interna para el registro de recorridos, mantenimientos e incidentes
+en el centro comercial. Pensada para uso en **tablets** (personal de campo) y
+**web** (administración), funcionando en el servidor interno de CityMall.
 
-First, run the development server:
+## Departamentos
+
+- **Seguridad** — 17 tareas con horarios y listas de verificación
+- **Eléctrico** — equipos (subestaciones, elevadores, gradas, iluminación)
+- **Civil** — 13 tareas de inspección y mantenimiento
+- **Refrigeración** — dos áreas:
+  - **Mall**: equipos centrales (UMAs, chillers, torres, bombas, etc.)
+  - **Locales**: mantenimiento individual de cada local (tipo de AC, ubicación,
+    13 puntos de checklist)
+
+## Características
+
+- Reportes con nivel **Normal** o **Urgente** (los urgentes se destacan)
+- Listas de verificación por tarea, con marca de **incidente** y nota
+- **Firma digital** del responsable
+- **Fotografías** (cámara de la tablet)
+- Panel de **administración** de usuarios (roles Admin / Usuario)
+- Búsqueda y filtrado de reportes por fecha, departamento, nivel y texto
+
+## Tecnología
+
+- **Next.js 16** (App Router, TypeScript)
+- **Prisma 7** con **SQLite** (un solo archivo, sin servidor de BD aparte)
+- **NextAuth v5** para autenticación
+- **Tailwind CSS** para la interfaz
+
+## Puesta en marcha
+
+Toda la información para instalar y arrancar está en:
+
+- **`ENTREGA.md`** — entrega vía USB e instalación en el servidor
+- **`INSTALACION.md`** — guía detallada (Node.js, base de datos, PM2, respaldos)
+
+Arranque rápido:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install        # instalar dependencias
+npm run db:push    # crear la base de datos
+npm run db:seed    # cargar datos iniciales
+npm run build      # compilar
+npm run start      # arrancar en http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+O simplemente ejecuta el script de arranque:
+- Windows: doble clic en `iniciar-windows.bat`
+- Mac/Linux: `./iniciar-mac-linux.sh`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Acceso inicial
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Usuario: `admin@citymall.com`
+- Contraseña: `Admin2024!`
 
-## Learn More
+> Cambia esta contraseña desde el panel de Administración tras el primer ingreso.
 
-To learn more about Next.js, take a look at the following resources:
+## Datos y respaldos
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Toda la información vive en dos lugares:
+- `prisma/dev.db` — base de datos (reportes, usuarios, firmas)
+- `public/uploads/` — fotografías
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Respaldar = copiar esos dos elementos a un lugar seguro periódicamente.
