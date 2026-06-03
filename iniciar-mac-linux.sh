@@ -36,7 +36,7 @@ if [ ! -f ".env" ]; then
     cat > .env << 'EOF'
 DATABASE_URL="file:./prisma/dev.db"
 NEXTAUTH_SECRET="citymall-reportes-secreto-2024-interno"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:3001"
 EOF
     echo -e "${GREEN} ✓ Archivo .env creado.${NC}"
     echo ""
@@ -80,9 +80,9 @@ echo " ════════════════════════�
 echo ""
 echo "   La aplicación está lista."
 echo ""
-echo -e "   Desde esta PC:     ${ORANGE}http://localhost:3000${NC}"
+echo -e "   Desde esta PC:     ${ORANGE}http://localhost:3001${NC}"
 if [ -n "$LOCAL_IP" ]; then
-    echo -e "   Desde tablets:     ${ORANGE}http://$LOCAL_IP:3000${NC}"
+    echo -e "   Desde tablets:     ${ORANGE}http://$LOCAL_IP:3001${NC}"
 fi
 echo ""
 echo "   Usuario:           admin@citymall.com"
@@ -95,9 +95,9 @@ echo ""
 # Abrir el navegador automáticamente
 sleep 2
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    open "http://localhost:3000" 2>/dev/null || true
+    open "http://localhost:3001" 2>/dev/null || true
 else
-    xdg-open "http://localhost:3000" 2>/dev/null || true
+    xdg-open "http://localhost:3001" 2>/dev/null || true
 fi
 
 # Iniciar el servidor

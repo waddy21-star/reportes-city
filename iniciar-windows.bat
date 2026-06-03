@@ -30,7 +30,7 @@ if not exist ".env" (
     (
         echo DATABASE_URL="file:./prisma/dev.db"
         echo NEXTAUTH_SECRET="citymall-reportes-secreto-2024-interno"
-        echo NEXTAUTH_URL="http://localhost:3000"
+        echo NEXTAUTH_URL="http://localhost:3001"
     ) > .env
     echo  ✓ Archivo .env creado.
     echo.
@@ -99,9 +99,9 @@ echo  ════════════════════════�
 echo.
 echo   La aplicación está lista. Abriendo...
 echo.
-echo   Desde esta PC:     http://localhost:3000
+echo   Desde esta PC:     http://localhost:3001
 if defined LOCAL_IP (
-    echo   Desde tablets:     http://%LOCAL_IP%:3000
+    echo   Desde tablets:     http://%LOCAL_IP%:3001
 )
 echo.
 echo   Usuario:           admin@citymall.com
@@ -113,7 +113,7 @@ echo.
 
 :: Abrir el navegador automáticamente después de 3 segundos
 start "" timeout /t 3 >nul
-start "" "http://localhost:3000"
+start "" "http://localhost:3001"
 
 :: Iniciar el servidor
 npm run start

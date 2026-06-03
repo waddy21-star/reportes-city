@@ -51,8 +51,8 @@ Cuando termine, verás algo así:
 ══════════════════════════════════════════════
   La aplicación está lista.
 
-  Desde esta PC:     http://localhost:3000
-  Desde tablets:     http://192.168.1.50:3000
+  Desde esta PC:     http://localhost:3001
+  Desde tablets:     http://192.168.1.50:3001
 
   Usuario:           admin@citymall.com
   Contraseña:        Admin2024!
@@ -66,7 +66,7 @@ Cuando termine, verás algo así:
 - **Para arrancar:** doble clic en `iniciar-windows.bat` (ya no descarga nada,
   arranca en segundos)
 - **Para detener:** cierra la ventana negra del servidor
-- **Desde las tablets:** abrir el navegador en `http://IP-DEL-SERVIDOR:3000`
+- **Desde las tablets:** abrir el navegador en `http://IP-DEL-SERVIDOR:3001`
   (la IP aparece cuando arrancas el script)
 
 > 💡 Para que la app arranque sola al encender el servidor y no haya que abrir
@@ -91,5 +91,5 @@ Cuando termine, verás algo así:
 1. GitHub → Download ZIP → copiar a USB
 2. En el servidor: instalar Node.js + descomprimir el zip
 3. Doble clic en iniciar-windows.bat
-4. Listo: http://localhost:3000  (admin@citymall.com / Admin2024!)
+4. Listo: http://localhost:3001  (admin@citymall.com / Admin2024!)
 ```

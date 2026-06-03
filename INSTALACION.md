@@ -41,11 +41,11 @@ Esto descarga todo lo necesario (toma unos minutos la primera vez).
 ```
 DATABASE_URL="file:./prisma/dev.db"
 NEXTAUTH_SECRET="cambia-esto-por-una-frase-secreta-larga-y-unica"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:3001"
 ```
 
 > 💡 Si vas a acceder desde tablets, cambia `NEXTAUTH_URL` por la IP del
-> servidor, por ejemplo `http://192.168.1.50:3000`.
+> servidor, por ejemplo `http://192.168.1.50:3001`.
 
 ---
 
@@ -76,10 +76,10 @@ npm run build
 npm run start
 ```
 
-La app quedará disponible en `http://localhost:3000`.
+La app quedará disponible en `http://localhost:3001`.
 
 Para que las **tablets** accedan, usa la IP del servidor en su navegador:
-`http://IP-DEL-SERVIDOR:3000` (ej: `http://192.168.1.50:3000`).
+`http://IP-DEL-SERVIDOR:3001` (ej: `http://192.168.1.50:3001`).
 
 > Para saber la IP del servidor: en Windows ejecuta `ipconfig`, en Linux/Mac
 > ejecuta `ip addr` o `ifconfig`.
