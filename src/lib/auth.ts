@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Permite el acceso desde la IP del servidor en la red local (tablets/celulares),
+  // no solo desde localhost. Necesario para uso interno en CityMall.
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: 'credentials',
