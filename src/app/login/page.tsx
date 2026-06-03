@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Shield } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,11 +41,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md px-6">
         {/* Logo / Brand */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style={{ backgroundColor: '#F47920' }}>
-            <Shield className="w-10 h-10 text-white" />
+          <div className="flex justify-center mb-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/citymall-logo.svg" alt="CityMall" width={90} height={108} />
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">CityMall</h1>
-          <p className="text-blue-200 mt-1 text-sm font-medium uppercase tracking-widest">Sistema de Reportes</p>
+          <p className="text-blue-200 mt-2 text-xs font-semibold uppercase tracking-widest">Sistema de Reportes</p>
         </div>
 
         {/* Card */}

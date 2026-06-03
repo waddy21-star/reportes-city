@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -9,7 +10,6 @@ import {
   FileText,
   Users,
   LogOut,
-  Shield,
   X,
 } from 'lucide-react'
 
@@ -52,15 +52,10 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: '#1C3557' }}>
       {/* Logo area */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F47920' }}>
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="text-white font-bold text-lg leading-none">CityMall</div>
-            <div className="text-blue-300 text-xs mt-0.5">Reportes</div>
-          </div>
+          <Image src="/citymall-logo.svg" alt="CityMall" width={40} height={48} className="flex-shrink-0" />
+          <div className="text-blue-200 text-xs font-semibold uppercase tracking-widest">Reportes</div>
         </div>
         {onClose && (
           <button

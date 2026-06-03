@@ -10,7 +10,9 @@ export async function proxy(req: NextRequest) {
   const isLoggedIn = !!token
   const isLoginPage = req.nextUrl.pathname === '/login'
   const isApiAuth = req.nextUrl.pathname.startsWith('/api/auth')
-  const isStatic = req.nextUrl.pathname.startsWith('/uploads')
+  const isStatic =
+    req.nextUrl.pathname.startsWith('/uploads') ||
+    /\.(?:svg|png|jpg|jpeg|gif|ico|webp|woff2?|ttf|otf|eot)$/.test(req.nextUrl.pathname)
 
   if (isApiAuth || isStatic) {
     return NextResponse.next()
