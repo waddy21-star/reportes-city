@@ -73,6 +73,7 @@ export async function PATCH(
       user: { select: { id: true, name: true, department: true } },
       reportTasks: { include: { task: true, checkItems: { include: { checklistItem: true } } } },
       photos: true,
+      localRecords: true,
     },
   })
 

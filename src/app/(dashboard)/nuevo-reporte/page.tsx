@@ -134,6 +134,9 @@ export default function NewReportPage() {
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskChecklist, setNewTaskChecklist] = useState('')
 
+  // Track report created to avoid duplicates if photo upload fails on retry
+  const createdReportIdRef = useRef<string | null>(null)
+
   const departments = session?.user?.role === 'ADMIN'
     ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
     : session?.user?.department ? [session.user.department] : []
@@ -146,6 +149,15 @@ export default function NewReportPage() {
 
   useEffect(() => {
     if (!department) return
+    // Reset all report state when department changes so no cross-department data leaks
+    setLocalRecords([])
+    setRefrigTab('MALL')
+    setShowLocalForm(false)
+    setLocalForm(emptyLocalForm())
+    setPhotos([])
+    setNotes('')
+    setLevel('NORMAL')
+    createdReportIdRef.current = null
     setLoadingTasks(true)
     fetch(`/api/tasks?department=${department}`)
       .then(r => r.json())
@@ -293,52 +305,57 @@ export default function NewReportPage() {
     setLoading(true)
 
     try {
-      // Build report tasks (for Refrigeración, only mall tasks)
-      const tasksToSubmit = department === 'REFRIGERACION' ? mallTasks : nonMallTasks
-      const reportTasks = tasksToSubmit.map(task => {
-        const state = taskStates[task.id]
-        return {
-          taskId: task.id,
-          hasIncident: state?.hasIncident || false,
-          incidentNote: state?.incidentNote || null,
-          checkItems: task.checkItems.map(item => ({
-            checklistItemId: item.id,
-            checked: state?.checkedItems[item.id] || false,
-          })),
-        }
-      })
+      let reportId = createdReportIdRef.current
 
-      // Get signature
-      let signature: string | null = null
-      if (sigRef.current && !sigRef.current.isEmpty()) {
-        signature = sigRef.current.toDataURL('image/png')
+      // Only create the report if it hasn't been created yet (prevents duplicates on retry)
+      if (!reportId) {
+        const tasksToSubmit = department === 'REFRIGERACION' ? mallTasks : nonMallTasks
+        const reportTasks = tasksToSubmit.map(task => {
+          const state = taskStates[task.id]
+          return {
+            taskId: task.id,
+            hasIncident: state?.hasIncident || false,
+            incidentNote: state?.incidentNote || null,
+            checkItems: task.checkItems.map(item => ({
+              checklistItemId: item.id,
+              checked: state?.checkedItems[item.id] || false,
+            })),
+          }
+        })
+
+        let signature: string | null = null
+        if (sigRef.current && !sigRef.current.isEmpty()) {
+          signature = sigRef.current.toDataURL('image/png')
+        }
+
+        const res = await fetch('/api/reports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            department,
+            level,
+            notes,
+            signature,
+            tasks: reportTasks,
+            localRecords: department === 'REFRIGERACION' ? localRecords : [],
+          }),
+        })
+
+        if (!res.ok) throw new Error('Error creating report')
+        const report = await res.json()
+        reportId = report.id
+        createdReportIdRef.current = reportId
       }
 
-      const res = await fetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          department,
-          level,
-          notes,
-          signature,
-          tasks: reportTasks,
-          localRecords: department === 'REFRIGERACION' ? localRecords : [],
-        }),
-      })
-
-      if (!res.ok) throw new Error('Error creating report')
-      const report = await res.json()
-
-      // Upload photos
+      // Upload photos (safe to retry — each upload is idempotent)
       for (const photo of photos) {
         const fd = new FormData()
         fd.append('file', photo.file)
-        fd.append('reportId', report.id)
+        fd.append('reportId', reportId!)
         await fetch('/api/upload', { method: 'POST', body: fd })
       }
 
-      router.push(`/reportes/${report.id}`)
+      router.push(`/reportes/${reportId}`)
     } catch {
       alert('Error al crear el reporte. Intente de nuevo.')
     } finally {

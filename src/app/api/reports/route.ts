@@ -69,20 +69,53 @@ type LocalRecordInput = {
   issueNote?: string
 }
 
+const VALID_DEPARTMENTS = ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
+
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json()
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })
+  }
+
   const { department, level, notes, signature, tasks, localRecords } = body
 
+  // Non-admins can only file reports for their own department.
+  const reportDepartment =
+    session.user.role === 'ADMIN' ? department : session.user.department
+  if (!reportDepartment || !VALID_DEPARTMENTS.includes(reportDepartment)) {
+    return NextResponse.json({ error: 'Departamento inválido' }, { status: 400 })
+  }
+
+  // Validate that every referenced task actually belongs to this department,
+  // so a client cannot attach tasks from other departments.
+  const taskIds: string[] = Array.isArray(tasks)
+    ? tasks.map((t: any) => t?.taskId).filter(Boolean)
+    : []
+  if (taskIds.length > 0) {
+    const validCount = await prisma.task.count({
+      where: { id: { in: taskIds }, department: reportDepartment },
+    })
+    if (validCount !== taskIds.length) {
+      return NextResponse.json(
+        { error: 'Una o más tareas no pertenecen al departamento' },
+        { status: 400 }
+      )
+    }
+  }
+
+  try {
   const report = await prisma.report.create({
     data: {
       userId: session.user.id,
-      department,
-      level: level || 'NORMAL',
+      department: reportDepartment,
+      level: level === 'URGENTE' ? 'URGENTE' : 'NORMAL',
       status: 'COMPLETADO',
       notes,
       signature,
@@ -126,4 +159,7 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json(report, { status: 201 })
+  } catch {
+    return NextResponse.json({ error: 'Error al crear el reporte' }, { status: 500 })
+  }
 }

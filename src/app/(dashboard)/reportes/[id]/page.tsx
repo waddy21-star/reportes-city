@@ -107,8 +107,12 @@ export default function ReportDetailPage() {
 
   useEffect(() => {
     fetch(`/api/reports/${params.id}`)
-      .then(r => r.json())
-      .then(data => {
+      .then(async r => {
+        if (!r.ok) {
+          setLoading(false)
+          return
+        }
+        const data = await r.json()
         setReport(data)
         // Expand tasks with incidents by default
         const expanded: Record<string, boolean> = {}
