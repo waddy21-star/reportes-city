@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { serializeDepts } from '@/lib/departments'
 
 export async function PATCH(
   req: NextRequest,
@@ -21,7 +22,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })
   }
 
-  const { name, email, password, role, department, active } = body
+  const { name, email, password, role, department, departments, active } = body
 
   const existing = await prisma.user.findUnique({ where: { id } })
   if (!existing) {
@@ -43,7 +44,11 @@ export async function PATCH(
   if (name !== undefined) updateData.name = name
   if (email !== undefined) updateData.email = email
   if (role !== undefined) updateData.role = role
-  if (department !== undefined) updateData.department = department || null
+  if (Array.isArray(departments)) {
+    updateData.department = serializeDepts(departments)
+  } else if (department !== undefined) {
+    updateData.department = department || null
+  }
   if (active !== undefined) updateData.active = active
   if (password) {
     updateData.password = await bcrypt.hash(password, 12)

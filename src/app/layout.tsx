@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Reportes",
   description: "Sistema de reportes internos CityMall",
   icons: {
-    icon: "/favicon.svg",
+    icon: '/citymall-logo.png',
   },
 };
 

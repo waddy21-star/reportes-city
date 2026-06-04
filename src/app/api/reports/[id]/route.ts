@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { parseDepts } from '@/lib/departments'
 
 const fullInclude = {
   user: { select: { id: true, name: true, department: true } },
@@ -34,8 +35,9 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // Non-admin can only see their own reports
-  if (session.user.role !== 'ADMIN' && report.userId !== session.user.id) {
+  // Non-admin can only see their own reports or reports from their departments
+  const userDepts = parseDepts(session.user.department)
+  if (session.user.role !== 'ADMIN' && report.userId !== session.user.id && !userDepts.includes(report.department)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

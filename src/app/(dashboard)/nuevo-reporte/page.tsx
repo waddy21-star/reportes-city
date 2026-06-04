@@ -17,13 +17,9 @@ import {
   Thermometer,
   Wind,
 } from 'lucide-react'
+import { parseDepts, DEPT_LABELS } from '@/lib/departments'
 
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
+const departmentLabels: Record<string, string> = DEPT_LABELS
 
 const AC_TYPES = [
   { value: 'MINI_SPLIT', label: 'Mini Split' },
@@ -139,6 +135,10 @@ function NewReportInner() {
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskChecklist, setNewTaskChecklist] = useState('')
 
+  // Inline checklist item
+  const [addingItemToTask, setAddingItemToTask] = useState<string | null>(null)
+  const [newItemLabel, setNewItemLabel] = useState('')
+
   // Track report created to avoid duplicates if photo upload fails on retry
   const createdReportIdRef = useRef<string | null>(null)
 
@@ -161,7 +161,7 @@ function NewReportInner() {
 
   const departments = session?.user?.role === 'ADMIN'
     ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
-    : session?.user?.department ? [session.user.department] : []
+    : parseDepts(session?.user?.department)
 
   // Modo edición: cargar el reporte existente una sola vez.
   useEffect(() => {
@@ -499,7 +499,29 @@ function NewReportInner() {
   const acTypeLabel = (value: string) => AC_TYPES.find(t => t.value === value)?.label || value
   const locationLabel = (value: string) => LOCATIONS.find(l => l.value === value)?.label || value
 
-  const renderTaskList = (taskList: Task[]) => (
+  const handleAddChecklistItem = async (taskId: string) => {
+    if (!newItemLabel.trim()) return
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: newItemLabel.trim() }),
+      })
+      if (!res.ok) throw new Error()
+      const newItem = await res.json()
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, checkItems: [...t.checkItems, newItem] } : t))
+      setTaskStates(prev => ({
+        ...prev,
+        [taskId]: { ...prev[taskId], checkedItems: { ...prev[taskId].checkedItems, [newItem.id]: false } },
+      }))
+      setNewItemLabel('')
+      setAddingItemToTask(null)
+    } catch {
+      alert('Error al agregar ítem')
+    }
+  }
+
+  const renderTaskList = (taskList: Task[], hideTimeSlot?: boolean) => (
     <>
       {loadingTasks ? (
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
@@ -527,7 +549,7 @@ function NewReportInner() {
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {task.timeSlot && task.timeSlot !== 'MALL' && (
+                      {!hideTimeSlot && task.timeSlot && task.timeSlot !== 'MALL' && (
                         <span
                           className="px-2 py-0.5 rounded-lg text-xs font-bold font-mono"
                           style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}
@@ -577,37 +599,69 @@ function NewReportInner() {
               {state.expanded && (
                 <div className="border-t px-5 py-4 space-y-3" style={{ borderColor: '#F5F7FA', backgroundColor: '#FAFBFC' }}>
                   {/* Checklist */}
-                  {task.checkItems.length > 0 && (
+                  {(task.checkItems.length > 0 || state.expanded) && (
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Lista de verificación</p>
-                      {task.checkItems.map(item => (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-3 cursor-pointer group"
+                      {task.checkItems.length > 0 && (
+                        <>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Lista de verificación</p>
+                          {task.checkItems.map(item => (
+                            <label
+                              key={item.id}
+                              className="flex items-center gap-3 cursor-pointer group"
+                            >
+                              <div
+                                onClick={() => toggleCheckItem(task.id, item.id)}
+                                className="w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer"
+                                style={{
+                                  borderColor: state.checkedItems[item.id] ? '#22C55E' : '#D1D5DB',
+                                  backgroundColor: state.checkedItems[item.id] ? '#22C55E' : 'white',
+                                }}
+                              >
+                                {state.checkedItems[item.id] && (
+                                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span
+                                className="text-sm transition-colors"
+                                style={{ color: state.checkedItems[item.id] ? '#9CA3AF' : '#374151', textDecoration: state.checkedItems[item.id] ? 'line-through' : 'none' }}
+                                onClick={() => toggleCheckItem(task.id, item.id)}
+                              >
+                                {item.label}
+                              </span>
+                            </label>
+                          ))}
+                        </>
+                      )}
+                      {/* Inline add item */}
+                      {addingItemToTask === task.id ? (
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={newItemLabel}
+                            onChange={e => setNewItemLabel(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleAddChecklistItem(task.id); if (e.key === 'Escape') setAddingItemToTask(null) }}
+                            placeholder="Nuevo ítem..."
+                            autoFocus
+                            className="flex-1 px-3 py-1.5 rounded-lg border text-xs outline-none"
+                            style={{ borderColor: '#E8ECF0', color: '#374151' }}
+                          />
+                          <button onClick={() => handleAddChecklistItem(task.id)} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ backgroundColor: '#22C55E' }}>+</button>
+                          <button onClick={() => setAddingItemToTask(null)} className="px-2.5 py-1.5 rounded-lg text-xs" style={{ color: '#9CA3AF' }}>✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setAddingItemToTask(task.id); setNewItemLabel('') }}
+                          className="flex items-center gap-1 mt-2 text-xs transition-colors"
+                          style={{ color: '#D1D5DB' }}
+                          onMouseOver={e => (e.currentTarget as HTMLElement).style.color = '#9CA3AF'}
+                          onMouseOut={e => (e.currentTarget as HTMLElement).style.color = '#D1D5DB'}
                         >
-                          <div
-                            onClick={() => toggleCheckItem(task.id, item.id)}
-                            className="w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer"
-                            style={{
-                              borderColor: state.checkedItems[item.id] ? '#22C55E' : '#D1D5DB',
-                              backgroundColor: state.checkedItems[item.id] ? '#22C55E' : 'white',
-                            }}
-                          >
-                            {state.checkedItems[item.id] && (
-                              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <span
-                            className="text-sm transition-colors"
-                            style={{ color: state.checkedItems[item.id] ? '#9CA3AF' : '#374151', textDecoration: state.checkedItems[item.id] ? 'line-through' : 'none' }}
-                            onClick={() => toggleCheckItem(task.id, item.id)}
-                          >
-                            {item.label}
-                          </span>
-                        </label>
-                      ))}
+                          <Plus className="w-3 h-3" />
+                          Agregar ítem
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -649,6 +703,48 @@ function NewReportInner() {
       )}
     </>
   )
+
+  const renderGroupedTaskList = (taskList: Task[]) => {
+    // Group tasks by timeSlot
+    const groups: { slot: string; tasks: Task[] }[] = []
+    const seen = new Set<string>()
+    taskList.forEach(task => {
+      const slot = task.timeSlot || ''
+      if (!seen.has(slot)) {
+        seen.add(slot)
+        groups.push({ slot, tasks: [] })
+      }
+      groups.find(g => g.slot === slot)!.tasks.push(task)
+    })
+
+    return (
+      <>
+        {loadingTasks ? (
+          <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
+            <div className="w-6 h-6 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-2" style={{ borderColor: '#F47920', borderTopColor: 'transparent' }}></div>
+            <p className="text-gray-400 text-sm">Cargando tareas...</p>
+          </div>
+        ) : (
+          groups.map(({ slot, tasks: groupTasks }) => (
+            <div key={slot}>
+              {slot && (
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="h-px flex-1" style={{ backgroundColor: '#E8ECF0' }} />
+                  <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
+                    {slot}
+                  </span>
+                  <div className="h-px flex-1" style={{ backgroundColor: '#E8ECF0' }} />
+                </div>
+              )}
+              <div className="space-y-3 mt-2">
+                {renderTaskList(groupTasks, true)}
+              </div>
+            </div>
+          ))
+        )}
+      </>
+    )
+  }
 
   if (loadingReport) {
     return (
@@ -1049,7 +1145,7 @@ function NewReportInner() {
                 )}
               </div>
 
-              {renderTaskList(nonMallTasks)}
+              {nonMallTasks.some(t => t.timeSlot) ? renderGroupedTaskList(nonMallTasks) : renderTaskList(nonMallTasks)}
 
               {/* Add custom task */}
               {!showAddTask ? (
