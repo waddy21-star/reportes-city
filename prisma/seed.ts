@@ -252,6 +252,233 @@ async function main() {
     }
   }
 
+  // Parking Sport tasks
+  const parkingTasks = [
+    // Área de parqueos
+    {
+      name: 'Ventanas abiertas con artículos expuestos',
+      order: 1,
+      checklist: ['Verificar ventanas de vehículos', 'Notificar a propietario si aplica', 'Registrar incidencia'],
+    },
+    {
+      name: 'Derrame de aceites/gasolina',
+      order: 2,
+      checklist: ['Identificar área afectada', 'Colocar señalización', 'Notificar a mantenimiento', 'Registrar incidencia'],
+    },
+    {
+      name: 'Objetos olvidados en cajeros',
+      order: 3,
+      checklist: ['Verificar cajeros automáticos', 'Registrar objetos encontrados', 'Entregar a custodia', 'Emitir reporte'],
+    },
+    {
+      name: 'Insistentes',
+      order: 4,
+      checklist: [
+        'Choches',
+        'Averías',
+        'Pérdidas de llave',
+        'Motos saltando agujas',
+        'Señales en mal estado',
+        'Topes',
+        'Capacidad en días de alto flujo',
+        'Dinero en cajeros',
+      ],
+    },
+    {
+      name: 'En época de lluvia: conos por piso mojado',
+      order: 5,
+      checklist: ['Identificar áreas con piso mojado', 'Colocar conos de señalización', 'Verificar colocación correcta', 'Registrar áreas señalizadas'],
+    },
+    // Parte administrativa del parqueo
+    {
+      name: 'Revisión de validadoras',
+      order: 6,
+      checklist: ['Validadora nivel 1 operativa', 'Validadora nivel 2 operativa', 'Validadora nivel 3 operativa', 'Registrar incidencias'],
+    },
+    {
+      name: 'Revisión en monitoreo de equipos',
+      order: 7,
+      checklist: ['Cajeros operativos', 'Agujas operativas', 'Compass operativo'],
+    },
+    {
+      name: 'Verificación y monitoreo continuo de cajeros',
+      order: 8,
+      checklist: ['Billetes atorados', 'Falta de papel', 'Dispensadores de tickets'],
+    },
+    {
+      name: 'Revisión vehicular para asignación de cuota diferenciada en aeropuertos',
+      order: 9,
+      checklist: ['Verificar vehículos con cuota diferenciada', 'Confirmar documentos habilitantes', 'Registrar asignaciones', 'Actualizar registro'],
+    },
+  ]
+
+  const parkingCount = await prisma.task.count({ where: { department: 'PARKING_SPORT' } })
+  if (parkingCount === 0) {
+    for (const taskData of parkingTasks) {
+      await prisma.task.create({
+        data: {
+          name: taskData.name,
+          department: 'PARKING_SPORT',
+          order: taskData.order,
+          isCustom: false,
+          checkItems: {
+            create: taskData.checklist.map((label, idx) => ({ label, order: idx })),
+          },
+        },
+      })
+    }
+  }
+
+  // New Electrical tasks
+  const newElectricTasks = [
+    {
+      name: 'Cuartos eléctricos',
+      timeSlot: null as string | null,
+      order: 100,
+      checklist: [
+        'CT-1A', 'CT-2A', 'CT-3A',
+        'CT-1B', 'CT-2B', 'CT-3B',
+        'CT-1C', 'CT-2C',
+        'CT-1D', 'CT-2D', 'CT-3D',
+        'CT-1E', 'CT-2E', 'CT-3E', 'CT-4E',
+        'CT-1F', 'CT-2F', 'CT-3F',
+        'CT-P1F', 'CT-P1B',
+        'CT-CTC', 'CT-CTS2', 'CT-CTN2', 'CT-CTN3',
+      ],
+    },
+    {
+      name: 'Iluminación exterior y fachada',
+      timeSlot: null as string | null,
+      order: 101,
+      checklist: [
+        'Fachada norte operativa',
+        'Fachada sur operativa',
+        'Fachada este operativa',
+        'Fachada oeste operativa',
+        'Iluminación exterior parqueo operativa',
+        'Letreros luminosos operativos',
+        'Sin luminarias fundidas',
+      ],
+    },
+    // Recorrido de Iluminación — una tarea por hora
+    {
+      name: 'Recorrido de Iluminación',
+      timeSlot: '04:00',
+      order: 102,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    {
+      name: 'Recorrido de Iluminación',
+      timeSlot: '08:00',
+      order: 103,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    {
+      name: 'Recorrido de Iluminación',
+      timeSlot: '09:00',
+      order: 104,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    {
+      name: 'Recorrido de Iluminación (Manual)',
+      timeSlot: '17:00',
+      order: 105,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    {
+      name: 'Recorrido de Iluminación',
+      timeSlot: '21:00',
+      order: 106,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    {
+      name: 'Recorrido de Iluminación',
+      timeSlot: '00:00',
+      order: 107,
+      checklist: ['Encendido ON', 'Verificar apagado OFF'],
+    },
+    // Recorrido de gradas eléctricas — una tarea por hora
+    {
+      name: 'Recorrido de Gradas Eléctricas',
+      timeSlot: '06:00',
+      order: 108,
+      checklist: ['Gradas S2 norte', 'Gradas S2 sur'],
+    },
+    {
+      name: 'Recorrido de Gradas Eléctricas',
+      timeSlot: '08:00',
+      order: 109,
+      checklist: ['City Towers'],
+    },
+    {
+      name: 'Recorrido de Gradas Eléctricas',
+      timeSlot: '09:00',
+      order: 110,
+      checklist: [
+        'Gradas S1 norte',
+        'Gradas S1 sur',
+        'Gradas N1 norte',
+        'Gradas N1 sur',
+        'Argento',
+        'Universal',
+        'Gastronómica',
+        'Food Court',
+        'N2 sur',
+        'N3 sur',
+        'Banana Este',
+        'Banana Oeste',
+      ],
+    },
+    {
+      name: 'Recorrido de Gradas Eléctricas',
+      timeSlot: '21:00',
+      order: 111,
+      checklist: [
+        'Argento',
+        'Universal',
+        'Food Court',
+        'Banana Este',
+        'Banana Oeste',
+        'S3 norte',
+        'N3 sur al S3 sur (Suben)',
+      ],
+    },
+    {
+      name: 'Recorrido de Gradas Eléctricas',
+      timeSlot: '00:00',
+      order: 112,
+      checklist: [
+        'N3 sur al S3 sur (Bajan)',
+        'Zona gastronómica',
+        'N1 norte',
+        'S1 norte',
+        'S2 norte',
+        'S3 norte',
+        'City Towers',
+      ],
+    },
+  ]
+
+  for (const taskData of newElectricTasks) {
+    const existing = await prisma.task.findFirst({
+      where: { name: taskData.name, department: 'ELECTRICO', timeSlot: taskData.timeSlot ?? null, order: taskData.order },
+    })
+    if (!existing) {
+      await prisma.task.create({
+        data: {
+          name: taskData.name,
+          department: 'ELECTRICO',
+          timeSlot: taskData.timeSlot ?? null,
+          order: taskData.order,
+          isCustom: false,
+          checkItems: {
+            create: taskData.checklist.map((label, idx) => ({ label, order: idx })),
+          },
+        },
+      })
+    }
+  }
+
   console.log('Seeding complete!')
 }
 

@@ -28,6 +28,7 @@ const departmentColors: Record<string, string> = {
   ELECTRICO: '#F47920',
   CIVIL: '#22C55E',
   REFRIGERACION: '#8B5CF6',
+  PARKING_SPORT: '#0EA5E9',
 }
 
 const departmentLabels = DEPT_LABELS
@@ -39,7 +40,7 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
   // Departamentos que el usuario puede usar: admin todos, otros los suyos (puede ser múltiples).
   const allowedDepartments =
     userRole === 'ADMIN'
-      ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
+      ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION', 'PARKING_SPORT']
       : parseDepts(userDepartment)
 
   const onNuevoReporte = pathname.startsWith('/nuevo-reporte')

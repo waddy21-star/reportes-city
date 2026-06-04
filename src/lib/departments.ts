@@ -1,10 +1,11 @@
-export const ALL_DEPARTMENTS = ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION'] as const
+export const ALL_DEPARTMENTS = ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION', 'PARKING_SPORT'] as const
 
 export const DEPT_LABELS: Record<string, string> = {
   SEGURIDAD: 'Seguridad',
   ELECTRICO: 'Eléctrico',
   CIVIL: 'Civil',
   REFRIGERACION: 'Refrigeración',
+  PARKING_SPORT: 'Parking Sport',
 }
 
 export function parseDepts(dept: string | null | undefined): string[] {
