@@ -43,3 +43,6 @@ next-env.d.ts
 # fotos subidas en runtime (no versionar)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# paquete generado por empaquetar-windows.bat (no versionar)
+/servidor-citymall
