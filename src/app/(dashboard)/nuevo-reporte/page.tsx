@@ -17,7 +17,7 @@ import {
   Thermometer,
   Wind,
 } from 'lucide-react'
-import { parseDepts, DEPT_LABELS } from '@/lib/departments'
+import { parseDepts, DEPT_LABELS, ALL_DEPARTMENTS } from '@/lib/departments'
 import { enqueueReport } from '@/lib/offline'
 
 const departmentLabels: Record<string, string> = DEPT_LABELS
@@ -161,7 +161,7 @@ function NewReportInner() {
   const SIG_HEIGHT = 180
 
   const departments = session?.user?.role === 'ADMIN'
-    ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
+    ? [...ALL_DEPARTMENTS]
     : parseDepts(session?.user?.department)
 
   // Modo edición: cargar el reporte existente una sola vez.

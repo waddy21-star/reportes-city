@@ -7,6 +7,30 @@ const dbPath = path.resolve('./prisma/dev.db')
 const adapter = new PrismaBetterSqlite3({ url: dbPath })
 const prisma = new PrismaClient({ adapter })
 
+// Agrega ítems de checklist a una tarea existente sin duplicar los que ya tiene.
+async function ensureChecklist(taskId: string, labels: string[]) {
+  const existing = await prisma.checklistItem.findMany({
+    where: { taskId },
+    select: { label: true },
+  })
+  const have = new Set(existing.map((i) => i.label))
+  let order = existing.length
+  for (const label of labels) {
+    if (!have.has(label)) {
+      await prisma.checklistItem.create({ data: { label, taskId, order: order++ } })
+    }
+  }
+}
+
+// Aplica un mapa de "nombre de tarea -> checklist" a las tareas de un depto.
+async function applyChecklists(department: string, map: Record<string, string[]>) {
+  const tasks = await prisma.task.findMany({ where: { department } })
+  for (const task of tasks) {
+    const labels = map[task.name]
+    if (labels) await ensureChecklist(task.id, labels)
+  }
+}
+
 async function main() {
   console.log('Seeding database...')
 
@@ -478,6 +502,104 @@ async function main() {
       })
     }
   }
+
+  // === Checklists para tareas de ELÉCTRICO que aún no tenían ===
+  const subestacionChecklist = [
+    'Revisión de transformador',
+    'Medición de voltaje',
+    'Medición de amperaje',
+    'Estado de tableros y breakers',
+    'Temperatura de equipos',
+    'Revisión de conexiones',
+    'Limpieza general',
+  ]
+  const elevadorChecklist = [
+    'Funcionamiento de puertas',
+    'Botoneras operativas',
+    'Nivelación de cabina',
+    'Iluminación interior',
+    'Sistema de emergencia y alarma',
+    'Sin ruidos anormales',
+  ]
+  const gradasChecklist = [
+    'Funcionamiento de pasamanos',
+    'Peines en buen estado',
+    'Iluminación operativa',
+    'Botón de paro de emergencia',
+    'Sin ruidos anormales',
+    'Sentido de marcha correcto',
+  ]
+
+  const electricTasksDb = await prisma.task.findMany({ where: { department: 'ELECTRICO' } })
+  for (const task of electricTasksDb) {
+    if (task.name.startsWith('SubEstación')) {
+      await ensureChecklist(task.id, subestacionChecklist)
+    } else if (task.name.startsWith('Elevador')) {
+      await ensureChecklist(task.id, elevadorChecklist)
+    } else if (task.name.startsWith('Gradas Eléctricas')) {
+      await ensureChecklist(task.id, gradasChecklist)
+    } else if (task.name === 'Sistema de Iluminación') {
+      await ensureChecklist(task.id, [
+        'Iluminación general operativa',
+        'Sin luminarias fundidas',
+        'Sensores funcionando',
+        'Tableros de control en buen estado',
+      ])
+    } else if (task.name === 'Cuartos eléctricos') {
+      // Además del listado de CT, agregar limpieza general.
+      await ensureChecklist(task.id, ['Limpieza general'])
+    }
+  }
+
+  // Reordenar los recorridos de ELÉCTRICO para intercalar el de las 6:00
+  // (gradas) entre las 4:00 y las 8:00 de iluminación.
+  const electricOrder: { name: string; timeSlot: string; order: number }[] = [
+    { name: 'Recorrido de Iluminación', timeSlot: '04:00', order: 102 },
+    { name: 'Recorrido de Gradas Eléctricas', timeSlot: '06:00', order: 103 },
+    { name: 'Recorrido de Iluminación', timeSlot: '08:00', order: 104 },
+    { name: 'Recorrido de Gradas Eléctricas', timeSlot: '08:00', order: 105 },
+    { name: 'Recorrido de Iluminación', timeSlot: '09:00', order: 106 },
+    { name: 'Recorrido de Gradas Eléctricas', timeSlot: '09:00', order: 107 },
+    { name: 'Recorrido de Iluminación (Manual)', timeSlot: '17:00', order: 108 },
+    { name: 'Recorrido de Iluminación', timeSlot: '21:00', order: 109 },
+    { name: 'Recorrido de Gradas Eléctricas', timeSlot: '21:00', order: 110 },
+    { name: 'Recorrido de Iluminación', timeSlot: '00:00', order: 111 },
+    { name: 'Recorrido de Gradas Eléctricas', timeSlot: '00:00', order: 112 },
+  ]
+  for (const o of electricOrder) {
+    await prisma.task.updateMany({
+      where: { department: 'ELECTRICO', name: o.name, timeSlot: o.timeSlot },
+      data: { order: o.order },
+    })
+  }
+
+  // === Checklists para CIVIL ===
+  await applyChecklists('CIVIL', {
+    'Azoteas Limpieza e Impermeabilización': ['Limpieza de azotea', 'Estado del impermeabilizante', 'Drenajes despejados', 'Sin filtraciones', 'Sin acumulación de agua'],
+    'Remplazo de Porcelanato': ['Identificar piezas dañadas', 'Disponibilidad de material', 'Reemplazo realizado', 'Fraguado y limpieza', 'Acabado uniforme'],
+    'Pintura General Cielos y Paredes': ['Identificar áreas a pintar', 'Preparación de superficie', 'Aplicación de pintura', 'Acabado uniforme', 'Limpieza del área'],
+    'Revisión de Varandales y Vidrios Comercial': ['Varandales firmes', 'Vidrios sin fisuras', 'Fijaciones en buen estado', 'Sin oxidación'],
+    'Revisión Juntas Sísmicas': ['Estado de juntas', 'Sellos en buen estado', 'Sin desprendimientos', 'Cubrejuntas firmes'],
+    'Revisión de Loza Sanitarias y Grifos Lavamanos': ['Lozas sin fugas', 'Grifos operativos', 'Sin filtraciones', 'Sellos en buen estado', 'Limpieza general'],
+    'Revisión Jardinería': ['Riego funcionando', 'Poda realizada', 'Plantas en buen estado', 'Limpieza de áreas verdes'],
+    'Revisión de Cubos': ['Estado estructural', 'Limpieza', 'Iluminación', 'Sin obstrucciones'],
+    'Revisión Puertas de Emergencias': ['Apertura correcta', 'Barras antipánico operativas', 'Señalización visible', 'Sin obstrucciones', 'Cierrapuertas funcionando'],
+    'Parqueo Pintura Topes': ['Topes pintados', 'Señalización visible', 'Numeración legible', 'Demarcación de líneas'],
+    'Mallas Colindantes': ['Mallas firmes', 'Sin roturas', 'Postes en buen estado', 'Sin oxidación'],
+    'Revisión Parrillas Entradas': ['Parrillas firmes', 'Sin obstrucciones', 'Drenaje funcionando', 'Limpieza realizada'],
+    'Puertas Lobbys': ['Apertura automática operativa', 'Sensores funcionando', 'Vidrios en buen estado', 'Sin ruidos anormales'],
+  })
+
+  // === Checklists para REFRIGERACIÓN ===
+  await applyChecklists('REFRIGERACION', {
+    'Mantenimiento UMAs': ['Limpieza de filtros', 'Revisión de bandas', 'Lubricación de rodamientos', 'Revisión de motor', 'Medición de amperaje', 'Estado de serpentines'],
+    'Mantenimiento Chillers': ['Presiones de refrigerante', 'Temperatura de agua', 'Revisión de compresor', 'Estado de condensador', 'Medición de amperaje', 'Sin fugas'],
+    'Mantenimiento Torres de Enfriamiento': ['Limpieza de relleno', 'Nivel de agua', 'Estado de ventilador', 'Revisión de bomba', 'Tratamiento de agua', 'Sin obstrucciones'],
+    'Mantenimiento Bombas de Agua': ['Sin fugas', 'Medición de presión', 'Lubricación', 'Medición de amperaje', 'Sin ruidos anormales'],
+    'Mantenimiento Inyectores y Extractores': ['Limpieza de aspas', 'Revisión de motor', 'Estado de bandas', 'Medición de amperaje', 'Sin ruidos anormales'],
+    'Revisión de Rejillas (Baños y Centro Comercial)': ['Rejillas limpias', 'Sin obstrucciones', 'Flujo de aire correcto', 'Fijación correcta'],
+    'Revisión de Temperatura': ['Temperatura áreas comunes', 'Temperatura food court', 'Registro de mediciones', 'Sin desviaciones'],
+  })
 
   console.log('Seeding complete!')
 }

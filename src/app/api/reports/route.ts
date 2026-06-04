@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parseDepts } from '@/lib/departments'
+import { parseDepts, ALL_DEPARTMENTS } from '@/lib/departments'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -75,7 +75,7 @@ type LocalRecordInput = {
   issueNote?: string
 }
 
-const VALID_DEPARTMENTS = ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
+const VALID_DEPARTMENTS = ALL_DEPARTMENTS as readonly string[]
 
 export async function POST(req: NextRequest) {
   const session = await auth()
