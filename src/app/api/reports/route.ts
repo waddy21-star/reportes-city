@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { parseDepts } from '@/lib/departments'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -35,9 +36,14 @@ export async function GET(req: NextRequest) {
     where.notes = { contains: keyword }
   }
 
-  // Non-admin users can only see their own reports
+  // Non-admin users see all reports from their departments
   if (session.user.role !== 'ADMIN') {
-    where.userId = session.user.id
+    const userDepts = parseDepts(session.user.department)
+    if (userDepts.length > 0) {
+      where.department = { in: userDepts }
+    } else {
+      where.userId = session.user.id
+    }
   }
 
   const reports = await prisma.report.findMany({

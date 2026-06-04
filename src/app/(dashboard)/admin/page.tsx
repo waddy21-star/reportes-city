@@ -18,13 +18,9 @@ import {
   FileText,
 } from 'lucide-react'
 import Link from 'next/link'
+import { parseDepts, serializeDepts, ALL_DEPARTMENTS, DEPT_LABELS } from '@/lib/departments'
 
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
+const departmentLabels = DEPT_LABELS
 
 interface User {
   id: string
@@ -61,7 +57,7 @@ export default function AdminPage() {
   const [formEmail, setFormEmail] = useState('')
   const [formPassword, setFormPassword] = useState('')
   const [formRole, setFormRole] = useState('USER')
-  const [formDept, setFormDept] = useState('')
+  const [formDepts, setFormDepts] = useState<string[]>([])
   const [formActive, setFormActive] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
@@ -96,7 +92,7 @@ export default function AdminPage() {
     setFormEmail('')
     setFormPassword('')
     setFormRole('USER')
-    setFormDept('')
+    setFormDepts([])
     setFormActive(true)
     setFormError('')
     setShowForm(true)
@@ -108,7 +104,7 @@ export default function AdminPage() {
     setFormEmail(user.email)
     setFormPassword('')
     setFormRole(user.role)
-    setFormDept(user.department || '')
+    setFormDepts(parseDepts(user.department))
     setFormActive(user.active)
     setFormError('')
     setShowForm(true)
@@ -120,7 +116,7 @@ export default function AdminPage() {
     setFormError('')
 
     try {
-      const body: any = { name: formName, email: formEmail, role: formRole, department: formDept || null, active: formActive }
+      const body: any = { name: formName, email: formEmail, role: formRole, departments: formDepts, active: formActive }
       if (formPassword) body.password = formPassword
       if (!editingUser) body.password = formPassword
 
@@ -320,19 +316,49 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#1C3557' }}>Departamento</label>
-                    <select
-                      value={formDept}
-                      onChange={e => setFormDept(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border text-sm outline-none"
-                      style={{ borderColor: '#E8ECF0', color: '#1C3557' }}
-                    >
-                      <option value="">Sin departamento</option>
-                      <option value="SEGURIDAD">Seguridad</option>
-                      <option value="ELECTRICO">Eléctrico</option>
-                      <option value="CIVIL">Civil</option>
-                      <option value="REFRIGERACION">Refrigeración</option>
-                    </select>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#1C3557' }}>Departamentos</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ALL_DEPARTMENTS.map(dep => {
+                        const checked = formDepts.includes(dep)
+                        return (
+                          <label
+                            key={dep}
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
+                            style={{
+                              borderColor: checked ? '#1C3557' : '#E8ECF0',
+                              backgroundColor: checked ? '#EEF2FF' : 'white',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setFormDepts(prev =>
+                                  checked ? prev.filter(d => d !== dep) : [...prev, dep]
+                                )
+                              }}
+                              className="sr-only"
+                            />
+                            <div
+                              className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                              style={{
+                                borderColor: checked ? '#1C3557' : '#D1D5DB',
+                                backgroundColor: checked ? '#1C3557' : 'white',
+                              }}
+                            >
+                              {checked && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-xs font-medium" style={{ color: checked ? '#1C3557' : '#6B7280' }}>
+                              {DEPT_LABELS[dep]}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {editingUser && (
@@ -480,11 +506,11 @@ function UserRow({ user, onEdit, onToggle }: { user: User; onEdit: (u: User) => 
           {user.role === 'ADMIN' && (
             <span className="px-1.5 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: '#FFF7ED', color: '#F47920' }}>Admin</span>
           )}
-          {user.department && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
-              {departmentLabels[user.department]}
+          {parseDepts(user.department).map(dep => (
+            <span key={dep} className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
+              {departmentLabels[dep] || dep}
             </span>
-          )}
+          ))}
         </div>
         <p className="text-xs text-gray-400 mt-0.5">{user.email} · {user._count.reports} reporte{user._count.reports !== 1 ? 's' : ''}</p>
       </div>

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
+import { parseDepts, DEPT_LABELS } from '@/lib/departments'
 
 interface SidebarProps {
   userRole: string
@@ -29,24 +30,17 @@ const departmentColors: Record<string, string> = {
   REFRIGERACION: '#8B5CF6',
 }
 
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
+const departmentLabels = DEPT_LABELS
 
 export default function Sidebar({ userRole, userName, userDepartment, onClose }: SidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Departamentos que el usuario puede usar: admin todos, otros solo el suyo.
+  // Departamentos que el usuario puede usar: admin todos, otros los suyos (puede ser múltiples).
   const allowedDepartments =
     userRole === 'ADMIN'
       ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
-      : userDepartment
-        ? [userDepartment]
-        : []
+      : parseDepts(userDepartment)
 
   const onNuevoReporte = pathname.startsWith('/nuevo-reporte')
   const [reporteOpen, setReporteOpen] = useState(onNuevoReporte)
@@ -136,10 +130,6 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
                         fontWeight: active ? 600 : 400,
                       }}
                     >
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: departmentColors[dep] || '#F47920' }}
-                      />
                       {departmentLabels[dep] || dep}
                     </Link>
                   )
@@ -173,14 +163,21 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
         <div className="flex items-center gap-3 mb-3">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-            style={{ backgroundColor: userDepartment ? departmentColors[userDepartment] || '#F47920' : '#F47920' }}
+            style={{ backgroundColor: '#F47920' }}
           >
             {userName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <div className="text-white text-sm font-medium truncate">{userName}</div>
             <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              {userRole === 'ADMIN' ? 'Administrador' : userDepartment ? departmentLabels[userDepartment] || userDepartment : 'Sin departamento'}
+              {userRole === 'ADMIN'
+                ? 'Administrador'
+                : (() => {
+                    const depts = parseDepts(userDepartment)
+                    return depts.length > 0
+                      ? depts.map(d => departmentLabels[d] || d).join(', ')
+                      : 'Sin departamento'
+                  })()}
             </div>
           </div>
         </div>
