@@ -9,7 +9,7 @@
     "start": "next start -p 3001",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
+    "db:seed": "ts-node --project prisma/tsconfig.seed.json prisma/seed.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
@@ -44,6 +44,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node --project prisma/tsconfig.seed.json prisma/seed.ts"
   }
 }
