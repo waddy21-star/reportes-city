@@ -29,14 +29,24 @@ if not defined NGROK_TOKEN goto falta_config
 if not defined NGROK_DOMINIO goto falta_config
 
 REM ----- Crear .env si no existe -----
-if exist ".env" goto env_ok
+if exist ".env" goto env_patch
 echo  Creando archivo de configuracion .env...
 echo DATABASE_URL="file:./prisma/dev.db"> .env
 echo NEXTAUTH_SECRET="citymall-reportes-secreto-2024-interno">> .env
 echo AUTH_SECRET="citymall-reportes-secreto-2024-interno">> .env
 echo NEXTAUTH_URL="https://%NGROK_DOMINIO%">> .env
+echo AUTH_URL="https://%NGROK_DOMINIO%">> .env
 echo  OK - .env creado.
 echo.
+goto env_ok
+
+REM Si .env ya existia, asegurar que NEXTAUTH_URL apunte al dominio ngrok
+REM (puede haber quedado en localhost si antes se usaba el .bat normal).
+:env_patch
+powershell -NoProfile -Command "$f='.\\.env'; $c=Get-Content $f; $c=$c -replace '^NEXTAUTH_URL=.*','NEXTAUTH_URL=\"https://%NGROK_DOMINIO%\"'; $c=$c -replace '^AUTH_URL=.*','AUTH_URL=\"https://%NGROK_DOMINIO%\"'; if (-not ($c -match 'AUTH_URL=')) { $c+='AUTH_URL=\"https://%NGROK_DOMINIO%\"' }; $c | Set-Content $f"
+echo  OK - NEXTAUTH_URL actualizado a https://%NGROK_DOMINIO%
+echo.
+
 :env_ok
 
 REM ----- Instalar dependencias si no existen -----
