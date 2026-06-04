@@ -116,7 +116,7 @@ export default function AdminPage() {
     setFormError('')
 
     try {
-      const body: any = { name: formName, email: formEmail, role: formRole, departments: formDepts, active: formActive }
+      const body: any = { name: formName, email: formEmail, role: formRole, departments: formRole === 'ADMIN' ? [] : formDepts, active: formActive }
       if (formPassword) body.password = formPassword
       if (!editingUser) body.password = formPassword
 
@@ -315,51 +315,57 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#1C3557' }}>Departamentos</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ALL_DEPARTMENTS.map(dep => {
-                        const checked = formDepts.includes(dep)
-                        return (
-                          <label
-                            key={dep}
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
-                            style={{
-                              borderColor: checked ? '#1C3557' : '#E8ECF0',
-                              backgroundColor: checked ? '#EEF2FF' : 'white',
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setFormDepts(prev =>
-                                  checked ? prev.filter(d => d !== dep) : [...prev, dep]
-                                )
-                              }}
-                              className="sr-only"
-                            />
-                            <div
-                              className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                  {formRole === 'ADMIN' ? (
+                    <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#FFF7ED', color: '#B45309' }}>
+                      Los administradores tienen acceso a todos los departamentos.
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: '#1C3557' }}>Departamentos</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {ALL_DEPARTMENTS.map(dep => {
+                          const checked = formDepts.includes(dep)
+                          return (
+                            <label
+                              key={dep}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                               style={{
-                                borderColor: checked ? '#1C3557' : '#D1D5DB',
-                                backgroundColor: checked ? '#1C3557' : 'white',
+                                borderColor: checked ? '#1C3557' : '#E8ECF0',
+                                backgroundColor: checked ? '#EEF2FF' : 'white',
                               }}
                             >
-                              {checked && (
-                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            <span className="text-xs font-medium" style={{ color: checked ? '#1C3557' : '#6B7280' }}>
-                              {DEPT_LABELS[dep]}
-                            </span>
-                          </label>
-                        )
-                      })}
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setFormDepts(prev =>
+                                    checked ? prev.filter(d => d !== dep) : [...prev, dep]
+                                  )
+                                }}
+                                className="sr-only"
+                              />
+                              <div
+                                className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                                style={{
+                                  borderColor: checked ? '#1C3557' : '#D1D5DB',
+                                  backgroundColor: checked ? '#1C3557' : 'white',
+                                }}
+                              >
+                                {checked && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="text-xs font-medium" style={{ color: checked ? '#1C3557' : '#6B7280' }}>
+                                {DEPT_LABELS[dep]}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {editingUser && (
                     <div className="flex items-center gap-3">
