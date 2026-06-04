@@ -523,16 +523,23 @@ export default function ReportDetailPage() {
                     {parsedItems.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Lista de verificación</p>
-                        {parsedItems.map(item => (
-                          <div key={item.id} className="flex items-center gap-3">
+                        {parsedItems.map((item: any) => (
+                          <div key={item.id} className="flex items-start gap-3">
                             {item.checked ? (
-                              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} />
+                              <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#22C55E' }} />
                             ) : (
-                              <XCircle className="w-5 h-5 flex-shrink-0 text-gray-300" />
+                              <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-gray-300" />
                             )}
-                            <span className="text-sm" style={{ color: item.checked ? '#374151' : '#9CA3AF', textDecoration: item.checked ? 'none' : 'line-through' }}>
-                              {item.label}
-                            </span>
+                            <div>
+                              <span className="text-sm" style={{ color: item.checked ? '#374151' : '#9CA3AF', textDecoration: item.checked ? 'none' : 'line-through' }}>
+                                {item.label}
+                              </span>
+                              {item.checked && item.value && (
+                                <span className="ml-2 px-2 py-0.5 rounded-md text-xs font-semibold" style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}>
+                                  {item.value}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

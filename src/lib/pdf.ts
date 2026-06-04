@@ -208,9 +208,9 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
     doc.text(`Mantenimiento de Locales (${locals.length})`, margin, y)
 
     const rows = locals.map(rec => {
-      let items: { label: string; checked: boolean }[] = []
+      let items: { label: string; checked: boolean; value?: string }[] = []
       try { items = JSON.parse(rec.items) } catch {}
-      const done = items.filter(i => i.checked).map(i => `• ${i.label}`).join('\n') || '—'
+      const done = items.filter(i => i.checked).map(i => `• ${i.label}${i.value ? `: ${i.value}` : ''}`).join('\n') || '—'
       const tipo = `${AC_TYPE_LABELS[rec.acType] || rec.acType} · ${LOCATION_LABELS[rec.location] || rec.location}`
       const detalle = rec.hasIssue ? `${done}\nPROBLEMA: ${rec.issueNote || 'sin detalle'}` : done
       return [rec.localName, tipo, detalle]
@@ -248,6 +248,45 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
     const lines = doc.splitTextToSize(report.notes, pageW - margin * 2)
     doc.text(lines, margin, y)
     y += lines.length * 4.5 + 6
+  }
+
+  // ===== Fotografías =====
+  if (report.photos && report.photos.length > 0) {
+    if (y > 240) { doc.addPage(); y = 20 }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.setTextColor(...NAVY)
+    doc.text(`Fotografías (${report.photos.length})`, margin, y)
+    y += 5
+
+    const colCount = 3
+    const photoW = (pageW - margin * 2 - (colCount - 1) * 4) / colCount
+    const photoH = photoW * 0.75
+    let col = 0
+
+    for (const photo of report.photos) {
+      const imgData = await loadImageAsDataURL(photo.path)
+      if (!imgData) continue
+
+      if (col === 0 && y + photoH > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage()
+        y = 20
+      }
+
+      const x = margin + col * (photoW + 4)
+      doc.setDrawColor(232, 236, 240)
+      doc.roundedRect(x, y, photoW, photoH, 2, 2, 'D')
+      try { doc.addImage(imgData, 'JPEG', x + 0.5, y + 0.5, photoW - 1, photoH - 1) } catch {}
+
+      col++
+      if (col >= colCount) {
+        col = 0
+        y += photoH + 4
+      }
+    }
+
+    if (col > 0) y += photoH + 4
+    y += 4
   }
 
   // ===== Firma =====

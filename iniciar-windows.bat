@@ -15,6 +15,16 @@ echo  OK - Node.js encontrado:
 node --version
 echo.
 
+REM Crear acceso directo en el escritorio si no existe
+set "SHORTCUT=%USERPROFILE%\Desktop\Reportes CityMall.lnk"
+if exist "%SHORTCUT%" goto shortcut_ok
+echo  Creando acceso directo en el escritorio...
+set "BAT_PATH=%~f0"
+powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%BAT_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.IconLocation = '%BAT_PATH%,0'; $s.Description = 'Iniciar sistema de reportes CityMall'; $s.Save()"
+echo  OK - acceso directo creado.
+echo.
+:shortcut_ok
+
 REM Crear .env si no existe
 if exist ".env" goto env_ok
 echo  Creando archivo de configuracion .env...

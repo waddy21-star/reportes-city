@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })
   }
 
-  const { department, level, notes, signature, tasks, localRecords } = body
+  const { department, level, status, notes, signature, tasks, localRecords } = body
 
   // Non-admins can only file reports for their own department.
   const reportDepartment =
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       department: reportDepartment,
       level: level === 'URGENTE' ? 'URGENTE' : 'NORMAL',
-      status: 'COMPLETADO',
+      status: status === 'COMPLETADO' ? 'COMPLETADO' : 'ACTIVO',
       notes,
       signature,
       reportTasks: {
