@@ -25,15 +25,24 @@ echo  OK - acceso directo creado.
 echo.
 :shortcut_ok
 
-REM Crear .env si no existe
-if exist ".env" goto env_ok
+REM Crear .env si no existe; si ya existe, asegurar que NEXTAUTH_URL
+REM apunte a localhost (por si antes se uso iniciar-internet.bat).
+if exist ".env" goto env_patch
 echo  Creando archivo de configuracion .env...
 echo DATABASE_URL="file:./prisma/dev.db"> .env
 echo NEXTAUTH_SECRET="citymall-reportes-secreto-2024-interno">> .env
 echo AUTH_SECRET="citymall-reportes-secreto-2024-interno">> .env
 echo NEXTAUTH_URL="http://localhost:3001">> .env
+echo AUTH_URL="http://localhost:3001">> .env
 echo  OK - .env creado.
 echo.
+goto env_ok
+
+:env_patch
+powershell -NoProfile -Command "$f='.\\.env'; $c=Get-Content $f; $c=$c -replace '^NEXTAUTH_URL=.*','NEXTAUTH_URL=\"http://localhost:3001\"'; $c=$c -replace '^AUTH_URL=.*','AUTH_URL=\"http://localhost:3001\"'; if (-not ($c -match 'AUTH_URL=')) { $c+='AUTH_URL=\"http://localhost:3001\"' }; $c | Set-Content $f"
+echo  OK - NEXTAUTH_URL actualizado a http://localhost:3001
+echo.
+
 :env_ok
 
 REM Instalar dependencias si no existen
