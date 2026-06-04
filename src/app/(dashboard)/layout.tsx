@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 import SessionProvider from '@/components/SessionProvider'
+import OfflineSync from '@/components/OfflineSync'
 import { usePathname } from 'next/navigation'
 
 const pageTitles: Record<string, string> = {
@@ -75,6 +76,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Sincronización de reportes guardados offline */}
+      <OfflineSync />
     </div>
   )
 }

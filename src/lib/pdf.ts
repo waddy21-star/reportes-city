@@ -276,7 +276,12 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
       const x = margin + col * (photoW + 4)
       doc.setDrawColor(232, 236, 240)
       doc.roundedRect(x, y, photoW, photoH, 2, 2, 'D')
-      try { doc.addImage(imgData, 'JPEG', x + 0.5, y + 0.5, photoW - 1, photoH - 1) } catch {}
+      // Detecta el formato real del dataURL (PNG, JPEG, etc.) para que
+      // addImage no falle al forzar un formato incorrecto.
+      const fmt = imgData.startsWith('data:image/png') ? 'PNG'
+        : imgData.startsWith('data:image/webp') ? 'WEBP'
+        : 'JPEG'
+      try { doc.addImage(imgData, fmt, x + 0.5, y + 0.5, photoW - 1, photoH - 1) } catch {}
 
       col++
       if (col >= colCount) {
