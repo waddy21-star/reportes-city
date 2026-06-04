@@ -16,12 +16,17 @@ node --version
 echo.
 
 REM ----- Leer configuracion de ngrok (creada una sola vez) -----
+REM Se usa "for /f" en lugar de "set /p" porque este ultimo falla cuando el
+REM archivo no termina con un salto de linea (caso tipico al pegar el token
+REM en el Bloc de notas y guardar sin presionar Enter).
 if not exist "ngrok-authtoken.txt" goto falta_config
 if not exist "ngrok-dominio.txt" goto falta_config
-set /p NGROK_TOKEN=<ngrok-authtoken.txt
-set /p NGROK_DOMINIO=<ngrok-dominio.txt
-if "%NGROK_TOKEN%"=="" goto falta_config
-if "%NGROK_DOMINIO%"=="" goto falta_config
+set "NGROK_TOKEN="
+set "NGROK_DOMINIO="
+for /f "usebackq delims=" %%a in ("ngrok-authtoken.txt") do if not defined NGROK_TOKEN set "NGROK_TOKEN=%%a"
+for /f "usebackq delims=" %%a in ("ngrok-dominio.txt") do if not defined NGROK_DOMINIO set "NGROK_DOMINIO=%%a"
+if not defined NGROK_TOKEN goto falta_config
+if not defined NGROK_DOMINIO goto falta_config
 
 REM ----- Crear .env si no existe -----
 if exist ".env" goto env_ok
@@ -109,18 +114,21 @@ echo  ============================================
 echo    FALTA CONFIGURAR EL ACCESO POR INTERNET
 echo  ============================================
 echo.
-echo  Antes de usar este archivo debes hacer una
-echo  configuracion de UNA SOLA VEZ (5 minutos):
+echo  Esto es lo que el programa pudo leer:
 echo.
-echo   1) Crea una cuenta gratis en  https://ngrok.com
-echo   2) Copia tu "authtoken" del panel y pegalo en el
-echo      archivo:   ngrok-authtoken.txt
-echo   3) En el panel, crea tu dominio gratis (Domains)
-echo      y pega el dominio (ej: reportes-cm.ngrok-free.app)
-echo      en el archivo:   ngrok-dominio.txt
+echo    Token   : "%NGROK_TOKEN%"
+echo    Dominio : "%NGROK_DOMINIO%"
 echo.
-echo  Tienes el paso a paso con imagenes en:
-echo      GUIA-ACCESO-INTERNET.md
+echo  Si alguno aparece vacio (""), revisa el archivo
+echo  correspondiente:
+echo    - ngrok-authtoken.txt  (tu token de ngrok)
+echo    - ngrok-dominio.txt    (tu dominio, ej: algo.ngrok-free.app)
+echo.
+echo  El dato debe estar en la PRIMERA linea, sin comillas
+echo  y sin espacios al inicio. Guarda el archivo y vuelve
+echo  a ejecutar este programa.
+echo.
+echo  Configuracion paso a paso en:  GUIA-ACCESO-INTERNET.md
 echo.
 pause
 goto :eof
