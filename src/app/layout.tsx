@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Reportes CityMall",
+  title: "Reportes",
   description: "Sistema de reportes internos CityMall",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

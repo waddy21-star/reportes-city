@@ -43,19 +43,19 @@ const LOCATIONS = [
 ]
 
 const LOCAL_CHECKLIST_ITEMS = [
-  { id: 1, label: 'Lavado de evaporador y condensador' },
-  { id: 2, label: 'Limpieza de drenaje y de bandeja' },
-  { id: 3, label: 'Revisión de insulación de tubería' },
-  { id: 4, label: 'Limpieza de difusores' },
-  { id: 5, label: 'Tomar amperaje y voltaje de compresor' },
-  { id: 6, label: 'Limpieza contacto de mando' },
-  { id: 7, label: 'Limpieza de blower' },
-  { id: 8, label: 'Tomar amperajes y voltaje de motor fan' },
-  { id: 9, label: 'Revisión estado de ductos de descarga' },
-  { id: 10, label: 'Presiones de refrigerante' },
-  { id: 11, label: 'Carga de refrigerante si necesita' },
-  { id: 12, label: 'Soportería de evaporador y condensador' },
-  { id: 13, label: 'Set de termostato' },
+  { id: 1, label: 'Lavado de evaporador y condensador', hasValue: false },
+  { id: 2, label: 'Limpieza de drenaje y de bandeja', hasValue: false },
+  { id: 3, label: 'Revisión de insulación de tubería', hasValue: false },
+  { id: 4, label: 'Limpieza de difusores', hasValue: false },
+  { id: 5, label: 'Tomar amperaje y voltaje de compresor', hasValue: true },
+  { id: 6, label: 'Limpieza contacto de mando', hasValue: false },
+  { id: 7, label: 'Limpieza de blower', hasValue: false },
+  { id: 8, label: 'Tomar amperajes y voltaje de motor fan', hasValue: true },
+  { id: 9, label: 'Revisión estado de ductos de descarga', hasValue: false },
+  { id: 10, label: 'Presiones de refrigerante', hasValue: true },
+  { id: 11, label: 'Carga de refrigerante si necesita', hasValue: false },
+  { id: 12, label: 'Soportería de evaporador y condensador', hasValue: false },
+  { id: 13, label: 'Set de termostato', hasValue: true },
 ]
 
 interface ChecklistItem {
@@ -85,7 +85,7 @@ interface LocalRecord {
   localName: string
   acType: string
   location: string
-  items: { id: number; label: string; checked: boolean }[]
+  items: { id: number; label: string; checked: boolean; value?: string }[]
   hasIssue: boolean
   issueNote: string
 }
@@ -95,6 +95,7 @@ interface LocalFormState {
   acType: string
   location: string
   checkedItems: Record<number, boolean>
+  itemValues: Record<number, string>
   hasIssue: boolean
   issueNote: string
 }
@@ -104,6 +105,7 @@ const emptyLocalForm = (): LocalFormState => ({
   acType: 'MINI_SPLIT',
   location: 'NIVEL_1',
   checkedItems: {},
+  itemValues: {},
   hasIssue: false,
   issueNote: '',
 })
@@ -139,6 +141,9 @@ function NewReportInner() {
 
   // Track report created to avoid duplicates if photo upload fails on retry
   const createdReportIdRef = useRef<string | null>(null)
+
+  // Save dialog
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
 
   // Modo edición
   const [editingStatus, setEditingStatus] = useState<string | null>(null)
@@ -356,6 +361,7 @@ function NewReportInner() {
         id: item.id,
         label: item.label,
         checked: localForm.checkedItems[item.id] || false,
+        ...(item.hasValue ? { value: localForm.itemValues[item.id] || '' } : {}),
       })),
       hasIssue: localForm.hasIssue,
       issueNote: localForm.issueNote,
@@ -403,11 +409,9 @@ function NewReportInner() {
     return existingSignature
   }
 
-  const handleSubmit = async () => {
-    if (!department) {
-      alert('Seleccione un departamento')
-      return
-    }
+  const handleSubmitWithStatus = async (statusChoice: 'ACTIVO' | 'COMPLETADO') => {
+    setShowSaveDialog(false)
+    if (!department) return
 
     setLoading(true)
 
@@ -423,6 +427,7 @@ function NewReportInner() {
           body: JSON.stringify({
             fullEdit: true,
             level,
+            status: statusChoice,
             notes,
             signature,
             tasks: reportTasks,
@@ -432,7 +437,6 @@ function NewReportInner() {
         })
         if (!res.ok) throw new Error('Error updating report')
 
-        // Subir fotos nuevas
         for (const photo of photos) {
           const fd = new FormData()
           fd.append('file', photo.file)
@@ -453,6 +457,7 @@ function NewReportInner() {
           body: JSON.stringify({
             department,
             level,
+            status: statusChoice,
             notes,
             signature,
             tasks: reportTasks,
@@ -466,7 +471,6 @@ function NewReportInner() {
         createdReportIdRef.current = reportId
       }
 
-      // Upload photos (safe to retry — each upload is idempotent)
       for (const photo of photos) {
         const fd = new FormData()
         fd.append('file', photo.file)
@@ -480,6 +484,14 @@ function NewReportInner() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = () => {
+    if (!department) {
+      alert('Seleccione un departamento')
+      return
+    }
+    setShowSaveDialog(true)
   }
 
   const hasIncidents = Object.values(taskStates).some(s => s.hasIncident)
@@ -660,29 +672,6 @@ function NewReportInner() {
           <div>
             <p className="font-bold text-sm" style={{ color: '#1C3557' }}>Editando reporte — {departmentLabels[department] || department}</p>
             <p className="text-xs text-gray-500">Corrija lo necesario y guarde los cambios.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Department selector (oculto en edición: el departamento es fijo) */}
-      {!editId && departments.length > 1 && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: '#E8ECF0' }}>
-          <h2 className="font-bold text-base mb-3" style={{ color: '#1C3557' }}>Departamento</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {departments.map(dep => (
-              <button
-                key={dep}
-                onClick={() => setDepartment(dep)}
-                className="py-3 px-4 rounded-xl text-sm font-semibold border-2 transition-all"
-                style={{
-                  borderColor: department === dep ? '#F47920' : '#E8ECF0',
-                  backgroundColor: department === dep ? '#FFF7ED' : 'white',
-                  color: department === dep ? '#F47920' : '#6B7280',
-                }}
-              >
-                {departmentLabels[dep]}
-              </button>
-            ))}
           </div>
         </div>
       )}
@@ -897,36 +886,51 @@ function NewReportInner() {
                         <p className="text-xs font-semibold uppercase tracking-wide mb-3 text-gray-500">Lista de Verificación</p>
                         <div className="space-y-1">
                           {LOCAL_CHECKLIST_ITEMS.map(item => (
-                            <button
-                              key={item.id}
-                              onClick={() => toggleLocalCheckItem(item.id)}
-                              className="w-full flex items-center gap-3 px-4 rounded-xl border transition-all text-left"
-                              style={{
-                                minHeight: '52px',
-                                borderColor: localForm.checkedItems[item.id] ? '#22C55E' : '#E8ECF0',
-                                backgroundColor: localForm.checkedItems[item.id] ? '#F0FDF4' : 'white',
-                              }}
-                            >
-                              <div
-                                className="w-7 h-7 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                            <div key={item.id} className="space-y-1">
+                              <button
+                                onClick={() => toggleLocalCheckItem(item.id)}
+                                className="w-full flex items-center gap-3 px-4 rounded-xl border transition-all text-left"
                                 style={{
-                                  borderColor: localForm.checkedItems[item.id] ? '#22C55E' : '#D1D5DB',
-                                  backgroundColor: localForm.checkedItems[item.id] ? '#22C55E' : 'white',
+                                  minHeight: '52px',
+                                  borderColor: localForm.checkedItems[item.id] ? '#22C55E' : '#E8ECF0',
+                                  backgroundColor: localForm.checkedItems[item.id] ? '#F0FDF4' : 'white',
                                 }}
                               >
-                                {localForm.checkedItems[item.id] && (
-                                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                )}
-                              </div>
-                              <span
-                                className="text-sm transition-colors"
-                                style={{ color: localForm.checkedItems[item.id] ? '#6B7280' : '#374151' }}
-                              >
-                                {item.label}
-                              </span>
-                            </button>
+                                <div
+                                  className="w-7 h-7 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                                  style={{
+                                    borderColor: localForm.checkedItems[item.id] ? '#22C55E' : '#D1D5DB',
+                                    backgroundColor: localForm.checkedItems[item.id] ? '#22C55E' : 'white',
+                                  }}
+                                >
+                                  {localForm.checkedItems[item.id] && (
+                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span
+                                  className="text-sm transition-colors"
+                                  style={{ color: localForm.checkedItems[item.id] ? '#6B7280' : '#374151' }}
+                                >
+                                  {item.label}
+                                </span>
+                              </button>
+                              {item.hasValue && localForm.checkedItems[item.id] && (
+                                <input
+                                  type="text"
+                                  value={localForm.itemValues[item.id] || ''}
+                                  onChange={e => setLocalForm(prev => ({
+                                    ...prev,
+                                    itemValues: { ...prev.itemValues, [item.id]: e.target.value },
+                                  }))}
+                                  placeholder="Valor medido (ej: 220V / 8A)"
+                                  className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none"
+                                  style={{ borderColor: '#22C55E', backgroundColor: '#F0FDF4', color: '#374151' }}
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              )}
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1239,6 +1243,50 @@ function NewReportInner() {
           </>
         )}
       </button>
+
+      {/* Save status dialog */}
+      {showSaveDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowSaveDialog(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h2 className="font-bold text-lg" style={{ color: '#1C3557' }}>¿Cómo guardar el reporte?</h2>
+              <p className="text-sm text-gray-500 mt-1">Seleccione el estado con el que se guardará.</p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSubmitWithStatus('ACTIVO')}
+                className="w-full py-4 rounded-xl text-sm font-bold border-2 text-left px-5 transition-all"
+                style={{ borderColor: '#F47920', backgroundColor: '#FFF7ED', color: '#F47920' }}
+              >
+                <div className="font-bold">Activo</div>
+                <div className="text-xs font-normal mt-0.5" style={{ color: '#92400E' }}>El reporte queda abierto y puede editarse.</div>
+              </button>
+              <button
+                onClick={() => handleSubmitWithStatus('COMPLETADO')}
+                className="w-full py-4 rounded-xl text-sm font-bold border-2 text-left px-5 transition-all"
+                style={{ borderColor: '#1C3557', backgroundColor: '#EEF2FF', color: '#1C3557' }}
+              >
+                <div className="font-bold">Completado</div>
+                <div className="text-xs font-normal mt-0.5" style={{ color: '#4B5563' }}>El reporte queda cerrado y no se puede editar.</div>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowSaveDialog(false)}
+              className="w-full py-2.5 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: '#F5F7FA', color: '#6B7280' }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
