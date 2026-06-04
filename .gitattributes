@@ -1,7 +1,9 @@
-# Los archivos .bat de Windows DEBEN tener saltos de linea CRLF,
+# Los archivos .bat de Windows DEBEN conservar saltos de linea CRLF,
 # o Windows cmd falla y cierra la ventana al instante.
-*.bat text eol=crlf
-*.cmd text eol=crlf
+# Se tratan como binarios para que git NO los normalice a LF y para que
+# la descarga "Download ZIP" de GitHub conserve los bytes CRLF tal cual.
+*.bat -text
+*.cmd -text
 
 # Los scripts de shell de Unix deben mantener LF.
 *.sh text eol=lf
