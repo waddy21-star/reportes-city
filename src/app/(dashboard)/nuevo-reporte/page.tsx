@@ -18,6 +18,7 @@ import {
   Wind,
 } from 'lucide-react'
 import { parseDepts, DEPT_LABELS } from '@/lib/departments'
+import { enqueueReport } from '@/lib/offline'
 
 const departmentLabels: Record<string, string> = DEPT_LABELS
 
@@ -449,21 +450,30 @@ function NewReportInner() {
       }
 
       // ===== Modo creación: POST =====
+      const payload = {
+        department,
+        level,
+        status: statusChoice,
+        notes,
+        signature,
+        tasks: reportTasks,
+        localRecords: department === 'REFRIGERACION' ? localRecords : [],
+      }
+
       let reportId = createdReportIdRef.current
       if (!reportId) {
-        const res = await fetch('/api/reports', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            department,
-            level,
-            status: statusChoice,
-            notes,
-            signature,
-            tasks: reportTasks,
-            localRecords: department === 'REFRIGERACION' ? localRecords : [],
-          }),
-        })
+        let res: Response
+        try {
+          res = await fetch('/api/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        } catch {
+          // Error de red (servidor caído / sin conexión): guardar offline.
+          await saveOffline(payload)
+          return
+        }
 
         if (!res.ok) throw new Error('Error creating report')
         const report = await res.json()
@@ -471,11 +481,15 @@ function NewReportInner() {
         createdReportIdRef.current = reportId
       }
 
-      for (const photo of photos) {
-        const fd = new FormData()
-        fd.append('file', photo.file)
-        fd.append('reportId', reportId!)
-        await fetch('/api/upload', { method: 'POST', body: fd })
+      try {
+        for (const photo of photos) {
+          const fd = new FormData()
+          fd.append('file', photo.file)
+          fd.append('reportId', reportId!)
+          await fetch('/api/upload', { method: 'POST', body: fd })
+        }
+      } catch {
+        // El reporte ya se creó; si las fotos fallan por red no bloqueamos.
       }
 
       router.push(`/reportes/${reportId}`)
@@ -483,6 +497,29 @@ function NewReportInner() {
       alert(editId ? 'Error al guardar los cambios. Intente de nuevo.' : 'Error al crear el reporte. Intente de nuevo.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Guarda el reporte en IndexedDB para sincronizarlo cuando vuelva el servidor.
+  const saveOffline = async (payload: any) => {
+    try {
+      await enqueueReport({
+        localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        payload,
+        photos: photos.map(p => ({
+          dataURL: p.preview,
+          filename: p.file.name || 'foto.jpg',
+          type: p.file.type || 'image/jpeg',
+        })),
+        createdAt: Date.now(),
+      })
+      window.dispatchEvent(new Event('citymall:pending-changed'))
+      alert(
+        'No hay conexión con el servidor. El reporte se guardó en este dispositivo y se enviará automáticamente cuando el servidor vuelva a estar disponible.'
+      )
+      router.push('/reportes')
+    } catch {
+      alert('No se pudo guardar el reporte localmente. Intente de nuevo.')
     }
   }
 

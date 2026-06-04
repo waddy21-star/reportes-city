@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
 
     await writeFile(filepath, buffer)
 
-    const path = `/uploads/${filename}`
+    // La ruta apunta a la API que lee del disco (no a public/ directo),
+    // porque con output: 'standalone' los archivos de public/ escritos en
+    // runtime no se sirven como estáticos.
+    const path = `/api/photos/${filename}`
 
     if (reportId) {
       const photo = await prisma.photo.create({
