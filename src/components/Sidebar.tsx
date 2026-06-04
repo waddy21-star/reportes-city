@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { useState } from 'react'
 import {
   LayoutDashboard,
   FilePlus,
@@ -10,6 +11,8 @@ import {
   Users,
   LogOut,
   X,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -35,10 +38,21 @@ const departmentLabels: Record<string, string> = {
 
 export default function Sidebar({ userRole, userName, userDepartment, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Departamentos que el usuario puede usar: admin todos, otros solo el suyo.
+  const allowedDepartments =
+    userRole === 'ADMIN'
+      ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
+      : userDepartment
+        ? [userDepartment]
+        : []
+
+  const onNuevoReporte = pathname.startsWith('/nuevo-reporte')
+  const [reporteOpen, setReporteOpen] = useState(onNuevoReporte)
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/nuevo-reporte', label: 'Nuevo Reporte', icon: FilePlus },
     { href: '/reportes', label: 'Reportes', icon: FileText },
     ...(userRole === 'ADMIN' ? [{ href: '/admin', label: 'Administración', icon: Users }] : []),
   ]
@@ -47,6 +61,8 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
     if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
   }
+
+  const currentDept = searchParams.get('dept')
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: '#1C3557' }}>
@@ -72,7 +88,69 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => (
+        {/* Dashboard */}
+        <Link
+          href="/"
+          onClick={onClose}
+          className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all"
+          style={{
+            backgroundColor: isActive('/') ? 'rgba(244,121,32,0.2)' : 'transparent',
+            color: isActive('/') ? '#F47920' : 'rgba(255,255,255,0.75)',
+            borderLeft: isActive('/') ? '3px solid #F47920' : '3px solid transparent',
+          }}
+        >
+          <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+          Dashboard
+        </Link>
+
+        {/* Nuevo Reporte (desplegable por departamento) */}
+        {allowedDepartments.length > 0 && (
+          <div>
+            <button
+              onClick={() => setReporteOpen(o => !o)}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                backgroundColor: onNuevoReporte ? 'rgba(244,121,32,0.2)' : 'transparent',
+                color: onNuevoReporte ? '#F47920' : 'rgba(255,255,255,0.75)',
+                borderLeft: onNuevoReporte ? '3px solid #F47920' : '3px solid transparent',
+              }}
+            >
+              <FilePlus className="w-5 h-5 flex-shrink-0" />
+              <span className="flex-1 text-left">Nuevo Reporte</span>
+              {reporteOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+
+            {reporteOpen && (
+              <div className="mt-1 ml-3 pl-3 space-y-0.5 border-l" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
+                {allowedDepartments.map(dep => {
+                  const active = onNuevoReporte && currentDept === dep
+                  return (
+                    <Link
+                      key={dep}
+                      href={`/nuevo-reporte?dept=${dep}`}
+                      onClick={onClose}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all"
+                      style={{
+                        backgroundColor: active ? 'rgba(255,255,255,0.10)' : 'transparent',
+                        color: active ? 'white' : 'rgba(255,255,255,0.7)',
+                        fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: departmentColors[dep] || '#F47920' }}
+                      />
+                      {departmentLabels[dep] || dep}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reportes + Administración */}
+        {navItems.slice(1).map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -82,18 +160,6 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
               backgroundColor: isActive(href) ? 'rgba(244,121,32,0.2)' : 'transparent',
               color: isActive(href) ? '#F47920' : 'rgba(255,255,255,0.75)',
               borderLeft: isActive(href) ? '3px solid #F47920' : '3px solid transparent',
-            }}
-            onMouseOver={(e) => {
-              if (!isActive(href)) {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)'
-                ;(e.currentTarget as HTMLElement).style.color = 'white'
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isActive(href)) {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
-                ;(e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)'
-              }
             }}
           >
             <Icon className="w-5 h-5 flex-shrink-0" />

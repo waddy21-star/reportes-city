@@ -20,8 +20,13 @@ import {
   TrendingUp,
   Thermometer,
   Wind,
+  Download,
+  Pencil,
+  CheckCheck,
+  RotateCcw,
 } from 'lucide-react'
 import Link from 'next/link'
+import { generateReportPdf } from '@/lib/pdf'
 
 const departmentLabels: Record<string, string> = {
   SEGURIDAD: 'Seguridad',
@@ -104,6 +109,8 @@ export default function ReportDetailPage() {
   const [escalating, setEscalating] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
   const [expandedLocals, setExpandedLocals] = useState<Record<string, boolean>>({})
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [changingStatus, setChangingStatus] = useState(false)
 
   useEffect(() => {
     fetch(`/api/reports/${params.id}`)
@@ -143,6 +150,38 @@ export default function ReportDetailPage() {
     }
   }
 
+  const handleToggleStatus = async () => {
+    if (!report) return
+    const next = report.status === 'COMPLETADO' ? 'ACTIVO' : 'COMPLETADO'
+    setChangingStatus(true)
+    try {
+      const res = await fetch(`/api/reports/${report.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next }),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setReport(updated)
+    } catch {
+      alert('Error al cambiar el estado del reporte')
+    } finally {
+      setChangingStatus(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!report) return
+    setDownloadingPdf(true)
+    try {
+      await generateReportPdf(report as any)
+    } catch {
+      alert('Error al generar el PDF')
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -165,11 +204,18 @@ export default function ReportDetailPage() {
     )
   }
 
+  // "Solo lo que se hizo": tareas con incidente o con al menos un ítem marcado.
+  const isDone = (t: ReportTask) => t.hasIncident || t.checkItems.some(i => i.checked)
+  const doneTasks = report.reportTasks.filter(isDone)
+
   const incidents = report.reportTasks.filter(t => t.hasIncident)
-  const mallTasks = report.reportTasks.filter(t => t.task.timeSlot === 'MALL')
-  const nonMallTasks = report.reportTasks.filter(t => t.task.timeSlot !== 'MALL')
+  const mallTasks = doneTasks.filter(t => t.task.timeSlot === 'MALL')
+  const nonMallTasks = doneTasks.filter(t => t.task.timeSlot !== 'MALL')
   const isRefrig = report.department === 'REFRIGERACION'
   const localRecords = report.localRecords || []
+
+  const canEdit = session?.user?.id === report.userId && report.status === 'ACTIVO'
+  const canChangeStatus = session?.user?.id === report.userId || session?.user?.role === 'ADMIN'
 
   const localIssues = localRecords.filter(r => r.hasIssue)
 
@@ -213,6 +259,16 @@ export default function ReportDetailPage() {
                     Normal
                   </span>
                 )}
+                {report.status === 'COMPLETADO' ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
+                    <CheckCheck className="w-3 h-3" />
+                    Completado
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1" style={{ backgroundColor: '#FFF7ED', color: '#F47920' }}>
+                    Activo
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
                 <span className="flex items-center gap-1">
@@ -227,23 +283,59 @@ export default function ReportDetailPage() {
             </div>
           </div>
 
-          {session?.user?.role === 'ADMIN' && report.level !== 'URGENTE' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {canEdit && (
+              <button
+                onClick={() => router.push(`/nuevo-reporte?edit=${report.id}`)}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+                style={{ backgroundColor: '#FFF7ED', color: '#F47920' }}
+              >
+                <Pencil className="w-4 h-4" />
+                Editar
+              </button>
+            )}
+            {session?.user?.role === 'ADMIN' && report.level !== 'URGENTE' && (
+              <button
+                onClick={handleEscalate}
+                disabled={escalating}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+                style={{ backgroundColor: '#FEF2F2', color: '#D64440' }}
+              >
+                <TrendingUp className="w-4 h-4" />
+                {escalating ? 'Escalando...' : 'Marcar Urgente'}
+              </button>
+            )}
+            {canChangeStatus && (
+              <button
+                onClick={handleToggleStatus}
+                disabled={changingStatus}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+                style={
+                  report.status === 'COMPLETADO'
+                    ? { backgroundColor: '#F5F7FA', color: '#6B7280' }
+                    : { backgroundColor: '#1C3557', color: 'white' }
+                }
+              >
+                {report.status === 'COMPLETADO' ? <RotateCcw className="w-4 h-4" /> : <CheckCheck className="w-4 h-4" />}
+                {changingStatus ? '...' : report.status === 'COMPLETADO' ? 'Reabrir' : 'Marcar Completado'}
+              </button>
+            )}
             <button
-              onClick={handleEscalate}
-              disabled={escalating}
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
-              style={{ backgroundColor: '#FEF2F2', color: '#D64440' }}
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors text-white"
+              style={{ backgroundColor: '#F47920' }}
             >
-              <TrendingUp className="w-4 h-4" />
-              {escalating ? 'Escalando...' : 'Marcar Urgente'}
+              <Download className="w-4 h-4" />
+              {downloadingPdf ? 'Generando...' : 'Descargar PDF'}
             </button>
-          )}
+          </div>
         </div>
 
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t" style={{ borderColor: '#F5F7FA' }}>
           <div className="text-center">
-            <div className="text-xl font-bold" style={{ color: '#1C3557' }}>{report.reportTasks.length}</div>
+            <div className="text-xl font-bold" style={{ color: '#1C3557' }}>{doneTasks.length}</div>
             <div className="text-xs text-gray-400">Tareas</div>
           </div>
           <div className="text-center">
@@ -307,7 +399,8 @@ export default function ReportDetailPage() {
             Tareas Mall
           </h2>
           {mallTasks.map(task => {
-            const checkedCount = task.checkItems.filter(i => i.checked).length
+            const doneItems = task.checkItems.filter(i => i.checked)
+            const checkedCount = doneItems.length
             const totalItems = task.checkItems.length
             const expanded = expandedTasks[task.id]
 
@@ -348,16 +441,12 @@ export default function ReportDetailPage() {
                 </div>
                 {expanded && (
                   <div className="border-t px-5 py-4 space-y-3" style={{ borderColor: '#F5F7FA', backgroundColor: '#FAFBFC' }}>
-                    {task.checkItems.length > 0 && (
+                    {doneItems.length > 0 && (
                       <div className="space-y-2">
-                        {task.checkItems.map(item => (
+                        {doneItems.map(item => (
                           <div key={item.id} className="flex items-center gap-3">
-                            {item.checked ? (
-                              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} />
-                            ) : (
-                              <XCircle className="w-5 h-5 flex-shrink-0 text-gray-300" />
-                            )}
-                            <span className="text-sm" style={{ color: item.checked ? '#374151' : '#9CA3AF', textDecoration: item.checked ? 'none' : 'line-through' }}>
+                            <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} />
+                            <span className="text-sm" style={{ color: '#374151' }}>
                               {item.checklistItem.label}
                             </span>
                           </div>
@@ -466,8 +555,14 @@ export default function ReportDetailPage() {
       {!isRefrig && (
         <div className="space-y-3">
           <h2 className="font-bold text-base" style={{ color: '#1C3557' }}>Tareas Ejecutadas</h2>
-          {report.reportTasks.map(task => {
-            const checkedCount = task.checkItems.filter(i => i.checked).length
+          {nonMallTasks.length === 0 && (
+            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border" style={{ borderColor: '#E8ECF0' }}>
+              <p className="text-sm text-gray-400">No se registraron tareas realizadas en este reporte.</p>
+            </div>
+          )}
+          {nonMallTasks.map(task => {
+            const doneItems = task.checkItems.filter(i => i.checked)
+            const checkedCount = doneItems.length
             const totalItems = task.checkItems.length
             const expanded = expandedTasks[task.id]
 
@@ -514,19 +609,12 @@ export default function ReportDetailPage() {
 
                 {expanded && (
                   <div className="border-t px-5 py-4 space-y-3" style={{ borderColor: '#F5F7FA', backgroundColor: '#FAFBFC' }}>
-                    {task.checkItems.length > 0 && (
+                    {doneItems.length > 0 && (
                       <div className="space-y-2">
-                        {task.checkItems.map(item => (
+                        {doneItems.map(item => (
                           <div key={item.id} className="flex items-center gap-3">
-                            {item.checked ? (
-                              <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} />
-                            ) : (
-                              <XCircle className="w-5 h-5 flex-shrink-0 text-gray-300" />
-                            )}
-                            <span
-                              className="text-sm"
-                              style={{ color: item.checked ? '#374151' : '#9CA3AF', textDecoration: item.checked ? 'none' : 'line-through' }}
-                            >
+                            <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} />
+                            <span className="text-sm" style={{ color: '#374151' }}>
                               {item.checklistItem.label}
                             </span>
                           </div>

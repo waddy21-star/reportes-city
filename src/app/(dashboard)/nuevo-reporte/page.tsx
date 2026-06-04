@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import SignatureCanvas from 'react-signature-canvas'
 import {
   ChevronDown,
@@ -108,9 +108,12 @@ const emptyLocalForm = (): LocalFormState => ({
   issueNote: '',
 })
 
-export default function NewReportPage() {
+function NewReportInner() {
   const { data: session } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('edit')
+  const deptParam = searchParams.get('dept')
   const sigRef = useRef<SignatureCanvas>(null)
 
   const [department, setDepartment] = useState('')
@@ -137,15 +140,61 @@ export default function NewReportPage() {
   // Track report created to avoid duplicates if photo upload fails on retry
   const createdReportIdRef = useRef<string | null>(null)
 
+  // Modo edición
+  const [editingStatus, setEditingStatus] = useState<string | null>(null)
+  const [existingPhotos, setExistingPhotos] = useState<{ id: string; path: string }[]>([])
+  const [existingSignature, setExistingSignature] = useState<string | null>(null)
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
+  const [loadingReport, setLoadingReport] = useState(!!editId)
+  // Datos del reporte a editar, aplicados después de cargar las tareas del depto.
+  const hydrateRef = useRef<any>(null)
+
+  // Firma: canvas responsivo (corrige el desfase del trazo)
+  const sigWrapRef = useRef<HTMLDivElement>(null)
+  const [sigWidth, setSigWidth] = useState(0)
+  const SIG_HEIGHT = 180
+
   const departments = session?.user?.role === 'ADMIN'
     ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION']
     : session?.user?.department ? [session.user.department] : []
 
+  // Modo edición: cargar el reporte existente una sola vez.
   useEffect(() => {
-    if (departments.length === 1) {
+    if (!editId) return
+    fetch(`/api/reports/${editId}`)
+      .then(async r => {
+        if (!r.ok) { setLoadingReport(false); return }
+        const data = await r.json()
+        hydrateRef.current = data
+        setEditingStatus(data.status)
+        setExistingSignature(data.signature || null)
+        setExistingPhotos((data.photos || []).map((p: any) => ({ id: p.id, path: p.path })))
+        setDepartment(data.department) // dispara la carga de tareas + hidratación
+        setLoadingReport(false)
+      })
+      .catch(() => setLoadingReport(false))
+  }, [editId])
+
+  // Preselección de departamento al crear (desde el sidebar o si solo tiene uno).
+  useEffect(() => {
+    if (editId) return
+    if (deptParam && departments.includes(deptParam)) {
+      setDepartment(deptParam)
+    } else if (departments.length === 1) {
       setDepartment(departments[0])
     }
-  }, [session])
+  }, [session, deptParam])
+
+  // Mide el ancho real del contenedor de la firma para que el lienzo tenga
+  // la MISMA resolución que su tamaño en pantalla (evita el desfase del trazo).
+  useEffect(() => {
+    const measure = () => {
+      if (sigWrapRef.current) setSigWidth(sigWrapRef.current.clientWidth)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [department, loadingReport])
 
   useEffect(() => {
     if (!department) return
@@ -173,6 +222,40 @@ export default function NewReportPage() {
             checkedItems: {},
           }
         })
+
+        // Si estamos editando y el reporte cargado es de este departamento,
+        // aplicar sus valores (tareas marcadas, incidentes, notas, etc.).
+        const rep = hydrateRef.current
+        if (rep && rep.department === department) {
+          rep.reportTasks?.forEach((rt: any) => {
+            const st = states[rt.taskId]
+            if (!st) return
+            st.hasIncident = rt.hasIncident
+            st.incidentNote = rt.incidentNote || ''
+            st.expanded = rt.hasIncident
+            rt.checkItems?.forEach((ci: any) => {
+              st.checkedItems[ci.checklistItemId] = ci.checked
+            })
+          })
+          setLevel(rep.level === 'URGENTE' ? 'URGENTE' : 'NORMAL')
+          setNotes(rep.notes || '')
+          setLocalRecords(
+            (rep.localRecords || []).map((lr: any) => {
+              let items: { id: number; label: string; checked: boolean }[] = []
+              try { items = JSON.parse(lr.items) } catch {}
+              return {
+                localName: lr.localName,
+                acType: lr.acType,
+                location: lr.location,
+                items,
+                hasIssue: lr.hasIssue,
+                issueNote: lr.issueNote || '',
+              }
+            })
+          )
+          hydrateRef.current = null
+        }
+
         setTaskStates(states)
         setLoadingTasks(false)
       })
@@ -296,6 +379,30 @@ export default function NewReportPage() {
     }))
   }
 
+  const buildReportTasks = () => {
+    const tasksToSubmit = department === 'REFRIGERACION' ? mallTasks : nonMallTasks
+    return tasksToSubmit.map(task => {
+      const state = taskStates[task.id]
+      return {
+        taskId: task.id,
+        hasIncident: state?.hasIncident || false,
+        incidentNote: state?.incidentNote || null,
+        checkItems: task.checkItems.map(item => ({
+          checklistItemId: item.id,
+          checked: state?.checkedItems[item.id] || false,
+        })),
+      }
+    })
+  }
+
+  const getSignature = (): string | null => {
+    if (sigRef.current && !sigRef.current.isEmpty()) {
+      return sigRef.current.toDataURL('image/png')
+    }
+    // En edición, si no firmó de nuevo, se conserva la firma existente.
+    return existingSignature
+  }
+
   const handleSubmit = async () => {
     if (!department) {
       alert('Seleccione un departamento')
@@ -305,29 +412,41 @@ export default function NewReportPage() {
     setLoading(true)
 
     try {
-      let reportId = createdReportIdRef.current
+      const reportTasks = buildReportTasks()
+      const signature = getSignature()
 
-      // Only create the report if it hasn't been created yet (prevents duplicates on retry)
-      if (!reportId) {
-        const tasksToSubmit = department === 'REFRIGERACION' ? mallTasks : nonMallTasks
-        const reportTasks = tasksToSubmit.map(task => {
-          const state = taskStates[task.id]
-          return {
-            taskId: task.id,
-            hasIncident: state?.hasIncident || false,
-            incidentNote: state?.incidentNote || null,
-            checkItems: task.checkItems.map(item => ({
-              checklistItemId: item.id,
-              checked: state?.checkedItems[item.id] || false,
-            })),
-          }
+      // ===== Modo edición: PATCH =====
+      if (editId) {
+        const res = await fetch(`/api/reports/${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullEdit: true,
+            level,
+            notes,
+            signature,
+            tasks: reportTasks,
+            localRecords: department === 'REFRIGERACION' ? localRecords : [],
+            removePhotoIds: removedPhotoIds,
+          }),
         })
+        if (!res.ok) throw new Error('Error updating report')
 
-        let signature: string | null = null
-        if (sigRef.current && !sigRef.current.isEmpty()) {
-          signature = sigRef.current.toDataURL('image/png')
+        // Subir fotos nuevas
+        for (const photo of photos) {
+          const fd = new FormData()
+          fd.append('file', photo.file)
+          fd.append('reportId', editId)
+          await fetch('/api/upload', { method: 'POST', body: fd })
         }
 
+        router.push(`/reportes/${editId}`)
+        return
+      }
+
+      // ===== Modo creación: POST =====
+      let reportId = createdReportIdRef.current
+      if (!reportId) {
         const res = await fetch('/api/reports', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -357,7 +476,7 @@ export default function NewReportPage() {
 
       router.push(`/reportes/${reportId}`)
     } catch {
-      alert('Error al crear el reporte. Intente de nuevo.')
+      alert(editId ? 'Error al guardar los cambios. Intente de nuevo.' : 'Error al crear el reporte. Intente de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -519,10 +638,34 @@ export default function NewReportPage() {
     </>
   )
 
+  if (loadingReport) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: '#F47920', borderTopColor: 'transparent' }} />
+          <p className="text-gray-400 text-sm">Cargando reporte...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-5 pb-10">
-      {/* Department selector */}
-      {departments.length > 1 && (
+      {/* Banner de edición */}
+      {editId && (
+        <div className="rounded-2xl p-4 border-2 flex items-center gap-3" style={{ borderColor: '#F47920', backgroundColor: '#FFF7ED' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#F47920' }}>
+            <CheckSquare className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-bold text-sm" style={{ color: '#1C3557' }}>Editando reporte — {departmentLabels[department] || department}</p>
+            <p className="text-xs text-gray-500">Corrija lo necesario y guarde los cambios.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Department selector (oculto en edición: el departamento es fijo) */}
+      {!editId && departments.length > 1 && (
         <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: '#E8ECF0' }}>
           <h2 className="font-bold text-base mb-3" style={{ color: '#1C3557' }}>Departamento</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -961,6 +1104,29 @@ export default function NewReportPage() {
       {/* Photos */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: '#E8ECF0' }}>
         <h2 className="font-bold text-base mb-3" style={{ color: '#1C3557' }}>Fotografías</h2>
+
+        {/* Fotos ya guardadas (modo edición) */}
+        {existingPhotos.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {existingPhotos.map(p => (
+              <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.path} alt="" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => {
+                    setRemovedPhotoIds(prev => [...prev, p.id])
+                    setExistingPhotos(prev => prev.filter(x => x.id !== p.id))
+                  }}
+                  className="absolute top-1 right-1 w-7 h-7 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+                >
+                  <X className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <label
           className="flex items-center justify-center gap-2 w-full py-4 rounded-xl border-2 border-dashed cursor-pointer transition-colors"
           style={{ borderColor: '#E8ECF0', color: '#9CA3AF' }}
@@ -1023,21 +1189,33 @@ export default function NewReportPage() {
             Limpiar
           </button>
         </div>
+
+        {existingSignature && sigEmpty && (
+          <div className="mb-3 rounded-xl border p-3" style={{ borderColor: '#E8ECF0', backgroundColor: '#FAFBFC' }}>
+            <p className="text-xs font-semibold text-gray-500 mb-1.5">Firma actual (se conserva si no firma de nuevo)</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={existingSignature} alt="Firma actual" style={{ maxHeight: '80px' }} />
+          </div>
+        )}
+
         <div
+          ref={sigWrapRef}
           className="rounded-xl overflow-hidden border"
-          style={{ borderColor: sigEmpty ? '#E8ECF0' : '#22C55E' }}
+          style={{ borderColor: sigEmpty ? '#E8ECF0' : '#22C55E', height: SIG_HEIGHT }}
         >
-          <SignatureCanvas
-            ref={sigRef}
-            penColor="#1C3557"
-            canvasProps={{
-              width: 600,
-              height: 160,
-              className: 'w-full sig-canvas',
-              style: { backgroundColor: '#F5F7FA', touchAction: 'none' },
-            }}
-            onBegin={() => setSigEmpty(false)}
-          />
+          {sigWidth > 0 && (
+            <SignatureCanvas
+              ref={sigRef}
+              penColor="#1C3557"
+              canvasProps={{
+                width: sigWidth,
+                height: SIG_HEIGHT,
+                className: 'sig-canvas',
+                style: { backgroundColor: '#F5F7FA', touchAction: 'none', display: 'block' },
+              }}
+              onBegin={() => setSigEmpty(false)}
+            />
+          )}
         </div>
         <p className="text-xs text-gray-400 mt-1.5">Firme con su dedo o lápiz óptico</p>
       </div>
@@ -1052,15 +1230,29 @@ export default function NewReportPage() {
         {loading ? (
           <>
             <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin border-white"></div>
-            Enviando reporte...
+            {editId ? 'Guardando cambios...' : 'Enviando reporte...'}
           </>
         ) : (
           <>
             <Send className="w-5 h-5" />
-            Enviar Reporte
+            {editId ? 'Guardar Cambios' : 'Enviar Reporte'}
           </>
         )}
       </button>
     </div>
+  )
+}
+
+export default function NewReportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#F47920', borderTopColor: 'transparent' }} />
+        </div>
+      }
+    >
+      <NewReportInner />
+    </Suspense>
   )
 }

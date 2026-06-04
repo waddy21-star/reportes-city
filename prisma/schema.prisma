@@ -44,7 +44,7 @@ model Report {
   userId       String
   department   String
   level        String                   @default("NORMAL") // "NORMAL" or "URGENTE"
-  status       String                   @default("COMPLETADO") // "COMPLETADO", "PENDIENTE"
+  status       String                   @default("ACTIVO") // "ACTIVO" or "COMPLETADO"
   notes        String?
   signature    String?                  // base64 string
   createdAt    DateTime                 @default(now())

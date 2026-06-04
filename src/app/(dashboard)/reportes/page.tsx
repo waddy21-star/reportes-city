@@ -271,6 +271,15 @@ function ReportCard({ report }: { report: Report }) {
                   Normal
                 </span>
               )}
+              {report.status === 'COMPLETADO' ? (
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
+                  Completado
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ backgroundColor: '#FFF7ED', color: '#F47920' }}>
+                  Activo
+                </span>
+              )}
               {incidents > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#FEF2F2', color: '#D64440' }}>
                   {incidents} incidente{incidents > 1 ? 's' : ''}
