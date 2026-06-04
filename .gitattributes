@@ -1,0 +1,7 @@
+# Los archivos .bat de Windows DEBEN tener saltos de linea CRLF,
+# o Windows cmd falla y cierra la ventana al instante.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Los scripts de shell de Unix deben mantener LF.
+*.sh text eol=lf
