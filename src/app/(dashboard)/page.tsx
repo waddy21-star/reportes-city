@@ -7,16 +7,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { FilePlus, AlertTriangle, FileText, Building2, ChevronRight, Clock } from 'lucide-react'
 import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors, deptLabel } from '@/lib/departments'
-
-interface Report {
-  id: string
-  department: string
-  level: string
-  status: string
-  createdAt: string
-  user: { name: string }
-  reportTasks: { hasIncident: boolean }[]
-}
+import type { ReportSummary as Report } from '@/types'
 
 export default function DashboardPage() {
   const { data: session } = useSession()

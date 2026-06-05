@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { serializeDepts } from '@/lib/departments'
+import type { UserUpdateInput } from '@/types'
 
 export async function PATCH(
   req: NextRequest,
@@ -15,7 +17,7 @@ export async function PATCH(
 
   const { id } = await params
 
-  let body: any
+  let body: UserUpdateInput
   try {
     body = await req.json()
   } catch {
@@ -40,7 +42,7 @@ export async function PATCH(
     }
   }
 
-  const updateData: any = {}
+  const updateData: Prisma.UserUpdateInput = {}
   if (name !== undefined) updateData.name = name
   if (email !== undefined) updateData.email = email
   if (role !== undefined) updateData.role = role

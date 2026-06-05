@@ -6,6 +6,8 @@
 //
 // Solo se encolan reportes NUEVOS (creación). La edición requiere conexión.
 
+import type { ReportCreateInput } from '@/types'
+
 const DB_NAME = 'citymall-reportes'
 const STORE = 'pendientes'
 const DB_VERSION = 1
@@ -18,7 +20,7 @@ export interface PendingPhoto {
 
 export interface PendingReport {
   localId: string
-  payload: any // cuerpo del POST a /api/reports
+  payload: ReportCreateInput // cuerpo del POST a /api/reports
   photos: PendingPhoto[]
   createdAt: number
 }

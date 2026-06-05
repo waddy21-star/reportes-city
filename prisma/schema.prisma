@@ -11,8 +11,10 @@ model User {
   name       String
   email      String   @unique
   password   String
-  role       String   @default("USER") // "ADMIN" or "USER"
-  department String?  // "SEGURIDAD", "ELECTRICO", "CIVIL", "REFRIGERACION"
+  role       String   @default("USER") // "ADMIN" | "USER"
+  // Uno o varios departamentos. Código simple ("SEGURIDAD") o JSON array
+  // ('["SEGURIDAD","ELECTRICO"]'). Leer/escribir con parseDepts/serializeDepts.
+  department String?
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   reports    Report[]
@@ -21,8 +23,8 @@ model User {
 model Task {
   id          String          @id @default(cuid())
   name        String
-  department  String          // "SEGURIDAD", "ELECTRICO", "CIVIL", "REFRIGERACION"
-  timeSlot    String?         // e.g. "04:30" for security tasks
+  department  String          // SEGURIDAD | ELECTRICO | CIVIL | REFRIGERACION | PARKING_SPORT
+  timeSlot    String?         // p. ej. "04:30" (tareas con horario) o "MALL" (Refrigeración)
   isCustom    Boolean         @default(false) // user-created tasks
   order       Int             @default(0)
   createdAt   DateTime        @default(now())

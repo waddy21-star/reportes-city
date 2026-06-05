@@ -28,64 +28,8 @@ import {
 import Link from 'next/link'
 import { generateReportPdf } from '@/lib/pdf'
 import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors } from '@/lib/departments'
-
-const AC_TYPE_LABELS: Record<string, string> = {
-  MINI_SPLIT: 'Mini Split',
-  PISO_CIELO: 'Piso Cielo',
-  CASSETTE: 'Cassette',
-  CENTRAL_DUCTOS: 'Central de Ductos',
-  CHILLER: 'Chiller',
-}
-
-const LOCATION_LABELS: Record<string, string> = {
-  NIVEL_1: 'Nivel 1',
-  NIVEL_2: 'Nivel 2',
-  NIVEL_3: 'Nivel 3',
-  SOTANO_1: 'Sótano 1',
-  SOTANO_2: 'Sótano 2',
-  SOTANO_3: 'Sótano 3',
-}
-
-interface ChecklistItem {
-  id: string
-  label: string
-  checked: boolean
-  checklistItem: { label: string }
-}
-
-interface ReportTask {
-  id: string
-  hasIncident: boolean
-  incidentNote: string | null
-  task: { id: string; name: string; timeSlot: string | null }
-  checkItems: ChecklistItem[]
-}
-
-interface LocalMaintenanceRecord {
-  id: string
-  localName: string
-  acType: string
-  location: string
-  items: string // JSON string
-  hasIssue: boolean
-  issueNote: string | null
-  createdAt: string
-}
-
-interface Report {
-  id: string
-  userId: string
-  department: string
-  level: string
-  status: string
-  notes: string | null
-  signature: string | null
-  createdAt: string
-  user: { id: string; name: string; department: string | null }
-  reportTasks: ReportTask[]
-  photos: { id: string; path: string; filename: string }[]
-  localRecords?: LocalMaintenanceRecord[]
-}
+import { acTypeLabel, locationLabel } from '@/lib/refrigeracion'
+import type { ReportDetail as Report, ReportTaskDetail as ReportTask } from '@/types'
 
 export default function ReportDetailPage() {
   const params = useParams()
@@ -161,7 +105,7 @@ export default function ReportDetailPage() {
     if (!report) return
     setDownloadingPdf(true)
     try {
-      await generateReportPdf(report as any)
+      await generateReportPdf(report)
     } catch {
       alert('Error al generar el PDF')
     } finally {
@@ -462,7 +406,7 @@ export default function ReportDetailPage() {
             Mantenimiento de Locales ({localRecords.length})
           </h2>
           {localRecords.map(rec => {
-            let parsedItems: { id: number; label: string; checked: boolean }[] = []
+            let parsedItems: { id: number; label: string; checked: boolean; value?: string }[] = []
             try { parsedItems = JSON.parse(rec.items) } catch {}
             const checkedCount = parsedItems.filter(i => i.checked).length
             const expanded = expandedLocals[rec.id]
@@ -479,10 +423,10 @@ export default function ReportDetailPage() {
                       <h3 className="font-bold text-base" style={{ color: '#1C3557' }}>{rec.localName}</h3>
                       <div className="flex flex-wrap gap-2 mt-2">
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: '#F5F3FF', color: '#8B5CF6' }}>
-                          {AC_TYPE_LABELS[rec.acType] || rec.acType}
+                          {acTypeLabel(rec.acType)}
                         </span>
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: '#EEF2FF', color: '#1C3557' }}>
-                          {LOCATION_LABELS[rec.location] || rec.location}
+                          {locationLabel(rec.location)}
                         </span>
                         <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}>
                           {checkedCount}/{parsedItems.length} ítems
@@ -510,7 +454,7 @@ export default function ReportDetailPage() {
                     {parsedItems.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Lista de verificación</p>
-                        {parsedItems.map((item: any) => (
+                        {parsedItems.map((item) => (
                           <div key={item.id} className="flex items-start gap-3">
                             {item.checked ? (
                               <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#22C55E' }} />

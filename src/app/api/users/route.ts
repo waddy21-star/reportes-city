@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { serializeDepts } from '@/lib/departments'
+import type { UserCreateInput } from '@/types'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  let body: any
+  let body: UserCreateInput
   try {
     body = await req.json()
   } catch {

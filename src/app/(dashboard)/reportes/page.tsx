@@ -6,7 +6,6 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
   Search,
-  Filter,
   AlertTriangle,
   ChevronRight,
   Building2,
@@ -15,23 +14,10 @@ import {
   X,
   FileText,
 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors, ALL_DEPARTMENTS } from '@/lib/departments'
-
-interface Report {
-  id: string
-  department: string
-  level: string
-  status: string
-  notes: string | null
-  createdAt: string
-  user: { id: string; name: string; department: string | null }
-  reportTasks: { id: string; hasIncident: boolean }[]
-  photos: { id: string }[]
-}
+import type { ReportListItem as Report } from '@/types'
 
 export default function ReportsPage() {
-  const { data: session } = useSession()
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 

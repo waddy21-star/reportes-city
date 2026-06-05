@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseDepts } from '@/lib/departments'
+import type { ReportUpdateInput, ReportTaskInput, LocalRecordInput } from '@/types'
 
 const fullInclude = {
   user: { select: { id: true, name: true, department: true } },
@@ -55,7 +57,7 @@ export async function PATCH(
 
   const { id } = await params
 
-  let body: any
+  let body: ReportUpdateInput
   try {
     body = await req.json()
   } catch {
@@ -78,7 +80,7 @@ export async function PATCH(
   // --- Acción ligera: cambiar solo estado y/o nivel ---
   // (admin puede en cualquier momento; el autor también puede cerrar/abrir).
   if (!fullEdit) {
-    const data: any = {}
+    const data: Prisma.ReportUpdateInput = {}
     if (level === 'NORMAL' || level === 'URGENTE') data.level = level
     if (status === 'ACTIVO' || status === 'COMPLETADO') data.status = status
     if (Object.keys(data).length === 0) {
@@ -101,7 +103,7 @@ export async function PATCH(
 
   // Validar que las tareas pertenezcan al departamento del reporte
   const taskIds: string[] = Array.isArray(tasks)
-    ? tasks.map((t: any) => t?.taskId).filter(Boolean)
+    ? tasks.map((t) => t?.taskId).filter(Boolean)
     : []
   if (taskIds.length > 0) {
     const validCount = await prisma.task.count({
@@ -136,12 +138,12 @@ export async function PATCH(
           notes: notes ?? null,
           ...(signature !== undefined ? { signature } : {}),
           reportTasks: {
-            create: (Array.isArray(tasks) ? tasks : []).map((task: any) => ({
+            create: (Array.isArray(tasks) ? tasks : []).map((task: ReportTaskInput) => ({
               taskId: task.taskId,
               hasIncident: task.hasIncident || false,
               incidentNote: task.incidentNote || null,
               checkItems: {
-                create: (task.checkItems || []).map((item: any) => ({
+                create: (task.checkItems || []).map((item) => ({
                   checklistItemId: item.checklistItemId,
                   checked: item.checked || false,
                 })),
@@ -151,7 +153,7 @@ export async function PATCH(
           localRecords:
             Array.isArray(localRecords) && localRecords.length > 0
               ? {
-                  create: localRecords.map((rec: any) => ({
+                  create: localRecords.map((rec: LocalRecordInput) => ({
                     localName: rec.localName,
                     acType: rec.acType,
                     location: rec.location,

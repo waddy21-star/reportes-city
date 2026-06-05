@@ -18,57 +18,18 @@ import {
   Wind,
 } from 'lucide-react'
 import { parseDepts, DEPT_LABELS, ALL_DEPARTMENTS } from '@/lib/departments'
+import { AC_TYPES, LOCATIONS, LOCAL_CHECKLIST_ITEMS } from '@/lib/refrigeracion'
 import { enqueueReport } from '@/lib/offline'
+import type {
+  Task,
+  ReportDetail,
+  ReportTaskDetail,
+  ReportTaskCheckItem,
+  LocalRecordRow,
+  ReportCreateInput,
+} from '@/types'
 
 const departmentLabels: Record<string, string> = DEPT_LABELS
-
-const AC_TYPES = [
-  { value: 'MINI_SPLIT', label: 'Mini Split' },
-  { value: 'PISO_CIELO', label: 'Piso Cielo' },
-  { value: 'CASSETTE', label: 'Cassette' },
-  { value: 'CENTRAL_DUCTOS', label: 'Central de Ductos' },
-  { value: 'CHILLER', label: 'Chiller' },
-]
-
-const LOCATIONS = [
-  { value: 'NIVEL_1', label: 'Nivel 1' },
-  { value: 'NIVEL_2', label: 'Nivel 2' },
-  { value: 'NIVEL_3', label: 'Nivel 3' },
-  { value: 'SOTANO_1', label: 'Sótano 1' },
-  { value: 'SOTANO_2', label: 'Sótano 2' },
-  { value: 'SOTANO_3', label: 'Sótano 3' },
-]
-
-const LOCAL_CHECKLIST_ITEMS = [
-  { id: 1, label: 'Lavado de evaporador y condensador', hasValue: false },
-  { id: 2, label: 'Limpieza de drenaje y de bandeja', hasValue: false },
-  { id: 3, label: 'Revisión de insulación de tubería', hasValue: false },
-  { id: 4, label: 'Limpieza de difusores', hasValue: false },
-  { id: 5, label: 'Tomar amperaje y voltaje de compresor', hasValue: true },
-  { id: 6, label: 'Limpieza contacto de mando', hasValue: false },
-  { id: 7, label: 'Limpieza de blower', hasValue: false },
-  { id: 8, label: 'Tomar amperajes y voltaje de motor fan', hasValue: true },
-  { id: 9, label: 'Revisión estado de ductos de descarga', hasValue: false },
-  { id: 10, label: 'Presiones de refrigerante', hasValue: true },
-  { id: 11, label: 'Carga de refrigerante si necesita', hasValue: false },
-  { id: 12, label: 'Soportería de evaporador y condensador', hasValue: false },
-  { id: 13, label: 'Set de termostato', hasValue: true },
-]
-
-interface ChecklistItem {
-  id: string
-  label: string
-  order: number
-}
-
-interface Task {
-  id: string
-  name: string
-  department: string
-  timeSlot: string | null
-  isCustom: boolean
-  checkItems: ChecklistItem[]
-}
 
 interface TaskState {
   taskId: string
@@ -153,7 +114,7 @@ function NewReportInner() {
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
   const [loadingReport, setLoadingReport] = useState(!!editId)
   // Datos del reporte a editar, aplicados después de cargar las tareas del depto.
-  const hydrateRef = useRef<any>(null)
+  const hydrateRef = useRef<ReportDetail | null>(null)
 
   // Firma: canvas responsivo (corrige el desfase del trazo)
   const sigWrapRef = useRef<HTMLDivElement>(null)
@@ -170,11 +131,11 @@ function NewReportInner() {
     fetch(`/api/reports/${editId}`)
       .then(async r => {
         if (!r.ok) { setLoadingReport(false); return }
-        const data = await r.json()
+        const data: ReportDetail = await r.json()
         hydrateRef.current = data
         setEditingStatus(data.status)
         setExistingSignature(data.signature || null)
-        setExistingPhotos((data.photos || []).map((p: any) => ({ id: p.id, path: p.path })))
+        setExistingPhotos((data.photos || []).map((p) => ({ id: p.id, path: p.path })))
         setDepartment(data.department) // dispara la carga de tareas + hidratación
         setLoadingReport(false)
       })
@@ -233,21 +194,21 @@ function NewReportInner() {
         // aplicar sus valores (tareas marcadas, incidentes, notas, etc.).
         const rep = hydrateRef.current
         if (rep && rep.department === department) {
-          rep.reportTasks?.forEach((rt: any) => {
+          rep.reportTasks?.forEach((rt: ReportTaskDetail) => {
             const st = states[rt.taskId]
             if (!st) return
             st.hasIncident = rt.hasIncident
             st.incidentNote = rt.incidentNote || ''
             st.expanded = rt.hasIncident
-            rt.checkItems?.forEach((ci: any) => {
+            rt.checkItems?.forEach((ci: ReportTaskCheckItem) => {
               st.checkedItems[ci.checklistItemId] = ci.checked
             })
           })
           setLevel(rep.level === 'URGENTE' ? 'URGENTE' : 'NORMAL')
           setNotes(rep.notes || '')
           setLocalRecords(
-            (rep.localRecords || []).map((lr: any) => {
-              let items: { id: number; label: string; checked: boolean }[] = []
+            (rep.localRecords || []).map((lr: LocalRecordRow) => {
+              let items: { id: number; label: string; checked: boolean; value?: string }[] = []
               try { items = JSON.parse(lr.items) } catch {}
               return {
                 localName: lr.localName,
@@ -270,7 +231,6 @@ function NewReportInner() {
 
   const mallTasks = tasks.filter(t => t.timeSlot === 'MALL')
   const nonMallTasks = tasks.filter(t => t.timeSlot !== 'MALL')
-  const displayTasks = department === 'REFRIGERACION' ? mallTasks : nonMallTasks
 
   const toggleExpand = (taskId: string) => {
     setTaskStates(prev => ({
@@ -501,7 +461,7 @@ function NewReportInner() {
   }
 
   // Guarda el reporte en IndexedDB para sincronizarlo cuando vuelva el servidor.
-  const saveOffline = async (payload: any) => {
+  const saveOffline = async (payload: ReportCreateInput) => {
     try {
       await enqueueReport({
         localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -1162,7 +1122,7 @@ function NewReportInner() {
 
                   {localRecords.length === 0 && !showLocalForm && (
                     <p className="text-center text-sm text-gray-400 py-4">
-                      No hay locales agregados. Presione "Agregar Local" para comenzar.
+                      No hay locales agregados. Presione &quot;Agregar Local&quot; para comenzar.
                     </p>
                   )}
                 </div>

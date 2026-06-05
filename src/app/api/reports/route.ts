@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseDepts, ALL_DEPARTMENTS } from '@/lib/departments'
+import type { ReportCreateInput, ReportTaskInput, LocalRecordInput } from '@/types'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -17,16 +19,17 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get('userId')
   const keyword = searchParams.get('keyword')
 
-  const where: any = {}
+  const where: Prisma.ReportWhereInput = {}
 
   if (dateFrom || dateTo) {
-    where.createdAt = {}
-    if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+    const createdAt: Prisma.DateTimeFilter = {}
+    if (dateFrom) createdAt.gte = new Date(dateFrom)
     if (dateTo) {
       const end = new Date(dateTo)
       end.setHours(23, 59, 59, 999)
-      where.createdAt.lte = end
+      createdAt.lte = end
     }
+    where.createdAt = createdAt
   }
 
   if (department) where.department = department
@@ -66,15 +69,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(reports)
 }
 
-type LocalRecordInput = {
-  localName: string
-  acType: string
-  location: string
-  items: { id: number; label: string; checked: boolean }[]
-  hasIssue: boolean
-  issueNote?: string
-}
-
 const VALID_DEPARTMENTS = ALL_DEPARTMENTS as readonly string[]
 
 export async function POST(req: NextRequest) {
@@ -83,7 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: any
+  let body: Partial<ReportCreateInput>
   try {
     body = await req.json()
   } catch {
@@ -102,7 +96,7 @@ export async function POST(req: NextRequest) {
   // Validate that every referenced task actually belongs to this department,
   // so a client cannot attach tasks from other departments.
   const taskIds: string[] = Array.isArray(tasks)
-    ? tasks.map((t: any) => t?.taskId).filter(Boolean)
+    ? tasks.map((t) => t?.taskId).filter(Boolean)
     : []
   if (taskIds.length > 0) {
     const validCount = await prisma.task.count({
@@ -126,17 +120,17 @@ export async function POST(req: NextRequest) {
       notes,
       signature,
       reportTasks: {
-        create: tasks?.map((task: any) => ({
+        create: (tasks ?? []).map((task: ReportTaskInput) => ({
           taskId: task.taskId,
           hasIncident: task.hasIncident || false,
           incidentNote: task.incidentNote,
           checkItems: {
-            create: task.checkItems?.map((item: any) => ({
+            create: (task.checkItems ?? []).map((item) => ({
               checklistItemId: item.checklistItemId,
               checked: item.checked || false,
-            })) || [],
+            })),
           },
-        })) || [],
+        })),
       },
       localRecords: localRecords && localRecords.length > 0
         ? {

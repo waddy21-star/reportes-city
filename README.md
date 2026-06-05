@@ -41,6 +41,10 @@ ningún motor de base de datos aparte.
 - **NextAuth v5** para autenticación
 - **Tailwind CSS** para la interfaz
 
+> **Para el equipo de desarrollo:** la arquitectura, el modelo de datos y las
+> convenciones del código están documentadas en **`ARQUITECTURA.md`**. Las
+> variables de entorno, en **`.env.example`**.
+
 ---
 
 ## 1. Requisitos del servidor

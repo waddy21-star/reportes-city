@@ -1,6 +1,8 @@
 import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import autoTable, { type CellHookData } from 'jspdf-autotable'
 import { DEPT_LABELS as departmentLabels } from '@/lib/departments'
+import { acTypeLabel, locationLabel } from '@/lib/refrigeracion'
+import type { ReportDetail } from '@/types'
 
 // Paleta CityMall
 const NAVY: [number, number, number] = [28, 53, 87] // #1C3557
@@ -8,53 +10,18 @@ const ORANGE: [number, number, number] = [244, 121, 32] // #F47920
 const RED: [number, number, number] = [214, 68, 64] // #D64440
 const GRAY: [number, number, number] = [107, 114, 128]
 
-const AC_TYPE_LABELS: Record<string, string> = {
-  MINI_SPLIT: 'Mini Split',
-  PISO_CIELO: 'Piso Cielo',
-  CASSETTE: 'Cassette',
-  CENTRAL_DUCTOS: 'Central de Ductos',
-  CHILLER: 'Chiller',
-}
+// jspdf-autotable adjunta lastAutoTable al documento, pero no está en los tipos
+// de jsPDF; este alias lo expone de forma tipada.
+type DocWithAutoTable = jsPDF & { lastAutoTable: { finalY: number } }
 
-const LOCATION_LABELS: Record<string, string> = {
-  NIVEL_1: 'Nivel 1',
-  NIVEL_2: 'Nivel 2',
-  NIVEL_3: 'Nivel 3',
-  SOTANO_1: 'Sótano 1',
-  SOTANO_2: 'Sótano 2',
-  SOTANO_3: 'Sótano 3',
-}
+// El PDF consume el mismo modelo que el detalle del reporte.
+export type PdfReport = ReportDetail
 
-interface PdfChecklistItem {
+// Ítems del checklist de un local (guardados como JSON en el reporte).
+interface LocalChecklistItem {
+  label: string
   checked: boolean
-  checklistItem: { label: string }
-}
-interface PdfReportTask {
-  hasIncident: boolean
-  incidentNote: string | null
-  task: { name: string; timeSlot: string | null }
-  checkItems: PdfChecklistItem[]
-}
-interface PdfLocalRecord {
-  localName: string
-  acType: string
-  location: string
-  items: string
-  hasIssue: boolean
-  issueNote: string | null
-}
-export interface PdfReport {
-  id: string
-  department: string
-  level: string
-  status: string
-  notes: string | null
-  signature: string | null
-  createdAt: string
-  user: { name: string }
-  reportTasks: PdfReportTask[]
-  photos: { path: string }[]
-  localRecords?: PdfLocalRecord[]
+  value?: string
 }
 
 // Convierte una imagen del sitio (ej. el logo) a dataURL para incrustarla.
@@ -182,13 +149,13 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
       headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
       columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' }, 1: { cellWidth: 'auto' } },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      didParseCell: cell => {
+      didParseCell: (cell: CellHookData) => {
         if (cell.section === 'body' && cell.column.index === 1 && String(cell.cell.raw).includes('INCIDENTE:')) {
           cell.cell.styles.textColor = RED
         }
       },
     })
-    y = (doc as any).lastAutoTable.finalY + 8
+    y = (doc as DocWithAutoTable).lastAutoTable.finalY + 8
   }
 
   // ===== Refrigeración: locales =====
@@ -201,10 +168,10 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
     doc.text(`Mantenimiento de Locales (${locals.length})`, margin, y)
 
     const rows = locals.map(rec => {
-      let items: { label: string; checked: boolean; value?: string }[] = []
+      let items: LocalChecklistItem[] = []
       try { items = JSON.parse(rec.items) } catch {}
       const done = items.filter(i => i.checked).map(i => `• ${i.label}${i.value ? `: ${i.value}` : ''}`).join('\n') || '—'
-      const tipo = `${AC_TYPE_LABELS[rec.acType] || rec.acType} · ${LOCATION_LABELS[rec.location] || rec.location}`
+      const tipo = `${acTypeLabel(rec.acType)} · ${locationLabel(rec.location)}`
       const detalle = rec.hasIssue ? `${done}\nPROBLEMA: ${rec.issueNote || 'sin detalle'}` : done
       return [rec.localName, tipo, detalle]
     })
@@ -218,13 +185,13 @@ export async function generateReportPdf(report: PdfReport): Promise<void> {
       headStyles: { fillColor: [139, 92, 246], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
       columnStyles: { 0: { cellWidth: 42, fontStyle: 'bold' }, 1: { cellWidth: 38 }, 2: { cellWidth: 'auto' } },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      didParseCell: cell => {
+      didParseCell: (cell: CellHookData) => {
         if (cell.section === 'body' && cell.column.index === 2 && String(cell.cell.raw).includes('PROBLEMA:')) {
           cell.cell.styles.textColor = RED
         }
       },
     })
-    y = (doc as any).lastAutoTable.finalY + 8
+    y = (doc as DocWithAutoTable).lastAutoTable.finalY + 8
   }
 
   // ===== Notas =====

@@ -12,35 +12,15 @@ import {
   CheckCircle2,
   XCircle,
   Edit,
-  Building2,
   X,
   ChevronRight,
   FileText,
 } from 'lucide-react'
 import Link from 'next/link'
-import { parseDepts, serializeDepts, ALL_DEPARTMENTS, DEPT_LABELS } from '@/lib/departments'
+import { parseDepts, ALL_DEPARTMENTS, DEPT_LABELS } from '@/lib/departments'
+import type { AdminUser as User, ReportSummary as Report, UserCreateInput, UserRole } from '@/types'
 
 const departmentLabels = DEPT_LABELS
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  department: string | null
-  active: boolean
-  createdAt: string
-  _count: { reports: number }
-}
-
-interface Report {
-  id: string
-  department: string
-  level: string
-  createdAt: string
-  user: { name: string }
-  reportTasks: { hasIncident: boolean }[]
-}
 
 export default function AdminPage() {
   const { data: session } = useSession()
@@ -116,7 +96,13 @@ export default function AdminPage() {
     setFormError('')
 
     try {
-      const body: any = { name: formName, email: formEmail, role: formRole, departments: formRole === 'ADMIN' ? [] : formDepts, active: formActive }
+      const body: Partial<UserCreateInput> & { active: boolean } = {
+        name: formName,
+        email: formEmail,
+        role: formRole as UserRole,
+        departments: formRole === 'ADMIN' ? [] : formDepts,
+        active: formActive,
+      }
       if (formPassword) body.password = formPassword
       if (!editingUser) body.password = formPassword
 
@@ -136,8 +122,8 @@ export default function AdminPage() {
 
       setShowForm(false)
       fetchUsers()
-    } catch (err: any) {
-      setFormError(err.message)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setFormLoading(false)
     }

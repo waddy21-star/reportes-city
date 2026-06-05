@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ALL_DEPARTMENTS } from '@/lib/departments'
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const department = searchParams.get('department')
 
-  const where: any = {}
+  const where: Prisma.TaskWhereInput = {}
   if (department) where.department = department
 
   const tasks = await prisma.task.findMany({
