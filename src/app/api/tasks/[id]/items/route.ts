@@ -11,7 +11,12 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { label } = await req.json()
+  let label: string | undefined
+  try {
+    ({ label } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })
+  }
   if (!label?.trim()) return NextResponse.json({ error: 'Label requerido' }, { status: 400 })
 
   const task = await prisma.task.findUnique({ where: { id } })

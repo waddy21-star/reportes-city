@@ -16,20 +16,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
-
-const departmentColors: Record<string, string> = {
-  SEGURIDAD: '#1C3557',
-  ELECTRICO: '#F47920',
-  CIVIL: '#22C55E',
-  REFRIGERACION: '#8B5CF6',
-}
+import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors, ALL_DEPARTMENTS } from '@/lib/departments'
 
 interface Report {
   id: string
@@ -119,10 +106,9 @@ export default function ReportsPage() {
               style={{ borderColor: '#E8ECF0', color: filterDept ? '#1C3557' : '#9CA3AF' }}
             >
               <option value="">Todos los depts.</option>
-              <option value="SEGURIDAD">Seguridad</option>
-              <option value="ELECTRICO">Eléctrico</option>
-              <option value="CIVIL">Civil</option>
-              <option value="REFRIGERACION">Refrigeración</option>
+              {ALL_DEPARTMENTS.map(dep => (
+                <option key={dep} value={dep}>{departmentLabels[dep]}</option>
+              ))}
             </select>
 
             <select

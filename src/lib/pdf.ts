@@ -1,19 +1,12 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { DEPT_LABELS as departmentLabels } from '@/lib/departments'
 
 // Paleta CityMall
 const NAVY: [number, number, number] = [28, 53, 87] // #1C3557
 const ORANGE: [number, number, number] = [244, 121, 32] // #F47920
 const RED: [number, number, number] = [214, 68, 64] // #D64440
-const GREEN: [number, number, number] = [34, 197, 94] // #22C55E
 const GRAY: [number, number, number] = [107, 114, 128]
-
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
 
 const AC_TYPE_LABELS: Record<string, string> = {
   MINI_SPLIT: 'Mini Split',

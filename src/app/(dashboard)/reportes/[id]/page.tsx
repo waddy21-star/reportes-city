@@ -27,20 +27,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { generateReportPdf } from '@/lib/pdf'
-
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
-
-const departmentColors: Record<string, string> = {
-  SEGURIDAD: '#1C3557',
-  ELECTRICO: '#F47920',
-  CIVIL: '#22C55E',
-  REFRIGERACION: '#8B5CF6',
-}
+import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors } from '@/lib/departments'
 
 const AC_TYPE_LABELS: Record<string, string> = {
   MINI_SPLIT: 'Mini Split',

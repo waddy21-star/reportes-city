@@ -14,21 +14,13 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
-import { parseDepts, DEPT_LABELS } from '@/lib/departments'
+import { parseDepts, DEPT_LABELS, ALL_DEPARTMENTS } from '@/lib/departments'
 
 interface SidebarProps {
   userRole: string
   userName: string
   userDepartment: string | null
   onClose?: () => void
-}
-
-const departmentColors: Record<string, string> = {
-  SEGURIDAD: '#1C3557',
-  ELECTRICO: '#F47920',
-  CIVIL: '#22C55E',
-  REFRIGERACION: '#8B5CF6',
-  PARKING_SPORT: '#0EA5E9',
 }
 
 const departmentLabels = DEPT_LABELS
@@ -40,7 +32,7 @@ export default function Sidebar({ userRole, userName, userDepartment, onClose }:
   // Departamentos que el usuario puede usar: admin todos, otros los suyos (puede ser múltiples).
   const allowedDepartments =
     userRole === 'ADMIN'
-      ? ['SEGURIDAD', 'ELECTRICO', 'CIVIL', 'REFRIGERACION', 'PARKING_SPORT']
+      ? [...ALL_DEPARTMENTS]
       : parseDepts(userDepartment)
 
   const onNuevoReporte = pathname.startsWith('/nuevo-reporte')

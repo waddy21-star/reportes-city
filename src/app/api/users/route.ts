@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { serializeDepts, parseDepts } from '@/lib/departments'
+import { serializeDepts } from '@/lib/departments'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -33,12 +33,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })
+  }
   const { name, email, password, role, department, departments } = body
+
+  if (!name?.trim() || !email?.trim() || !password?.trim()) {
+    return NextResponse.json(
+      { error: 'Nombre, correo y contraseña son obligatorios' },
+      { status: 400 }
+    )
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
+    return NextResponse.json({ error: 'Ese correo ya está en uso' }, { status: 400 })
   }
 
   const hashed = await bcrypt.hash(password, 12)

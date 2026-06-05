@@ -46,8 +46,3 @@ next-env.d.ts
 
 # paquete generado por empaquetar-windows.bat (no versionar)
 /servidor-citymall
-
-# acceso por internet (ngrok): binario y token secreto (no versionar)
-/ngrok.exe
-/ngrok.zip
-/ngrok-authtoken.txt

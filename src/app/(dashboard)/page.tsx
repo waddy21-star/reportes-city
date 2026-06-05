@@ -6,20 +6,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { FilePlus, AlertTriangle, FileText, Building2, ChevronRight, Clock } from 'lucide-react'
-
-const departmentLabels: Record<string, string> = {
-  SEGURIDAD: 'Seguridad',
-  ELECTRICO: 'Eléctrico',
-  CIVIL: 'Civil',
-  REFRIGERACION: 'Refrigeración',
-}
-
-const departmentColors: Record<string, string> = {
-  SEGURIDAD: '#1C3557',
-  ELECTRICO: '#F47920',
-  CIVIL: '#22C55E',
-  REFRIGERACION: '#8B5CF6',
-}
+import { DEPT_LABELS as departmentLabels, DEPT_COLORS as departmentColors, deptLabel } from '@/lib/departments'
 
 interface Report {
   id: string
@@ -74,7 +61,7 @@ export default function DashboardPage() {
             style={{ backgroundColor: 'rgba(244,121,32,0.25)', color: '#F47920', border: '1px solid rgba(244,121,32,0.4)' }}
           >
             <Building2 className="w-3 h-3" />
-            {departmentLabels[session.user.department] || session.user.department}
+            {deptLabel(session.user.department)}
           </span>
         )}
       </div>
@@ -111,7 +98,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-lg font-bold" style={{ color: '#1C3557' }}>
-            {session?.user?.role === 'ADMIN' ? 'Admin' : session?.user?.department ? departmentLabels[session.user.department] : 'N/A'}
+            {session?.user?.role === 'ADMIN' ? 'Admin' : session?.user?.department ? deptLabel(session.user.department) : 'N/A'}
           </div>
           <p className="text-xs text-gray-400 mt-1">área asignada</p>
         </div>

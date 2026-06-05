@@ -26,7 +26,7 @@ echo.
 :shortcut_ok
 
 REM Crear .env si no existe; si ya existe, asegurar que NEXTAUTH_URL
-REM apunte a localhost (por si antes se uso iniciar-internet.bat).
+REM apunte a localhost.
 if exist ".env" goto env_patch
 echo  Creando archivo de configuracion .env...
 echo DATABASE_URL="file:./prisma/dev.db"> .env
